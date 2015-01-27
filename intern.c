@@ -17,6 +17,7 @@ static struct bucket* internment[JACK_INTERNMENT_SIZE];
 
 // djb2 with xor modification http://www.cse.yorku.ca/~oz/hash.html
 static unsigned long string_hash(int length, const char* string) {
+  return 0;
   unsigned long hash = 5381;
   int i;
   for (i = 0; i < length; ++i) {
@@ -31,8 +32,8 @@ jack_buffer_t* jack_intern(int len, const char *string) {
   int index = hash % JACK_INTERNMENT_SIZE;
   struct bucket *bucket = internment[index];
   while (bucket) {
-    // TODO: add string comparison recheck if hash collisions happen
-    if (bucket->hash == hash) {
+    if (bucket->hash == hash && bucket->buffer.length == len &&
+      strncmp(string, bucket->buffer.data, len) == 0) {
       bucket->count++;
       return &bucket->buffer;
     }
@@ -62,7 +63,9 @@ void jack_unintern(jack_buffer_t *buffer) {
   while (bucket) {
     if (bucket->hash == hash) {
       if (!--bucket->count) {
-        *parent = bucket->next;
+        struct bucket *next = bucket->next;
+        free(bucket);
+        *parent = next;
       }
       return;
     }

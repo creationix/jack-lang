@@ -2,7 +2,6 @@
 #define JACK_TYPES_H
 
 #include <stdlib.h>
-#include <stdint.h>
 
 // REF_COUNT must be larger than the largest enum value below.
 // Also it must be a power of two for the mask to work.
@@ -65,7 +64,7 @@ typedef struct jack_value_s {
     int ref_count;
   };
   union {
-    intptr_t integer;
+    int64_t integer;
     jack_buffer_t *buffer;
     jack_list_t *list;
     jack_set_t *set;
