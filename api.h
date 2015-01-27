@@ -18,8 +18,6 @@ void jack_dump_state(jack_state_t *state);
 
 void jack_new_integer(jack_state_t *state, intptr_t integer);
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data);
-void jack_new_string(jack_state_t *state, size_t length, const char* string);
-void jack_new_cstring(jack_state_t *state, const char* string);
 void jack_new_symbol(jack_state_t *state, const char* symbol);
 
 // List is a doubly linked list of jack values

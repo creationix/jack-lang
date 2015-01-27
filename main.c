@@ -6,14 +6,14 @@ int main() {
 
   jack_state_t* state = jack_new_state(10);
 
-  jack_new_cstring(state, "Hello World");
-  jack_new_string(state, 5, "12345");
+  jack_new_symbol(state, "Hello World");
+  jack_new_buffer(state, 5, "12345");
   jack_new_integer(state, 42);
   jack_new_symbol(state, "fun-stuff");
   jack_new_buffer(state, 12, "Hello World\n");
 
   jack_new_list(state);
-  jack_new_cstring(state, "numbers!");
+  jack_new_symbol(state, "numbers!");
   jack_list_push(state, -2);
   int i;
   for (i = 0; i < 5; ++i) {
@@ -25,7 +25,7 @@ int main() {
 
   // map.name = "Tim Caswell"
   jack_new_symbol(state, "name");
-  jack_new_cstring(state, "Tim Caswell");
+  jack_new_symbol(state, "Tim Caswell");
   jack_map_set(state, -3);
 
   // map.age = 32
@@ -55,7 +55,7 @@ int main() {
     jack_new_integer(state, 42);
     jack_list_push(state, -2);
     jack_new_list(state);
-    jack_new_cstring(state, "numbers!");
+    jack_new_symbol(state, "numbers!");
     jack_list_push(state, -2);
     jack_list_insert(state, -2);
     jack_pop(state);

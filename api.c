@@ -44,13 +44,6 @@ static jack_value_t* new_buffer(size_t length, const char* data) {
   return value;
 }
 
-static jack_value_t* new_string(size_t length, const char* data) {
-  jack_value_t *value = malloc(sizeof(*value));
-  value->type = String;
-  value->buffer = jack_intern(length, data);
-  return value;
-}
-
 static jack_value_t* new_symbol(size_t length, const char* data) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Symbol;
@@ -116,7 +109,7 @@ static void free_value(jack_value_t* value) {
     case Buffer:
       free(value->buffer);
       break;
-    case String: case Symbol:
+    case Symbol:
       jack_unintern(value->buffer);
       break;
     case List:
@@ -140,8 +133,8 @@ static unsigned long long hash_value(jack_value_t *value) {
   return 11400714819674759057UL * (integer ^ integer >> 3);
 }
 
-// Equality is defined as the same type and same value.  Since strings
-// and symbols are interned, this works for them too.
+// Equality is defined as the same type and same value.  Since  symbols are
+// interned, this works for them too.
 static bool value_is_equal(jack_value_t *one, jack_value_t *two) {
   return (one->type & JACK_TYPE_MASK) == (two->type & JACK_TYPE_MASK) &&
          one->buffer == two->buffer;
@@ -300,9 +293,6 @@ jack_state_t* jack_new_state(int slots) {
 
 void jack_dump_value(jack_value_t *value) {
   switch (value->type & JACK_TYPE_MASK) {
-    case String:
-      printf("'%.*s'", value->buffer->length, value->buffer->data);
-      break;
     case Symbol:
       printf(":%.*s", value->buffer->length, value->buffer->data);
       break;
@@ -363,14 +353,6 @@ void jack_new_integer(jack_state_t *state, intptr_t integer) {
 
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data) {
   return ref_value(state_push(state, new_buffer(length, data)))->buffer->data;
-};
-
-void jack_new_string(jack_state_t *state, size_t length, const char* string) {
-  ref_value(state_push(state, new_string(length, string)));
-};
-
-void jack_new_cstring(jack_state_t *state, const char* string) {
-  jack_new_string(state, strlen(string), string);
 };
 
 void jack_new_symbol(jack_state_t *state, const char* symbol) {

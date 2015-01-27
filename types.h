@@ -12,7 +12,6 @@
 typedef enum {
   Integer,
   Buffer,
-  String,
   Symbol,
   List,
   Map,
