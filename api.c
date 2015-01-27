@@ -87,9 +87,9 @@ static jack_value_t* new_map(int num_buckets) {
 }
 
 static void free_list(jack_list_t* list) {
-  jack_node_t* node = list->head;
+  jack_list_node_t* node = list->head;
   while (node) {
-    jack_node_t* next = node->next;
+    jack_list_node_t* next = node->next;
     unref_value(node->value);
     free(node);
     node = next;
@@ -198,14 +198,62 @@ static jack_value_t* state_get_as(jack_state_t* state, jack_type_t type, int ind
   return value;
 }
 
-// Append a value to the end of a list.
+// Append a value to the tail of a list.
 static void list_push(jack_list_t* list, jack_value_t* value) {
-  jack_node_t *node = malloc(sizeof(*node));
+  jack_list_node_t *node = malloc(sizeof(*node));
   node->value = value;
   node->next = NULL;
-  if (!list->head) list->head = node;
-  if (list->tail) list->tail->next = node;
-  list->tail = node;
+  node->prev = list->tail;
+  if (list->tail) {
+    list->tail->next = node;
+    list->tail = node;
+  }
+  else {
+    list->head = list->tail = node;
+  }
+  list->length++;
+}
+
+// Insert a value to the head of a list
+static void list_insert(jack_list_t* list, jack_value_t* value) {
+  jack_list_node_t *node = malloc(sizeof(*node));
+  node->value = value;
+  node->next = list->head;
+  node->prev = NULL;
+  if (list->head) {
+    list->head->prev = node;
+    list->head = node;
+  }
+  else {
+    list->head = list->tail = node;
+  }
+  list->length++;
+}
+
+// Pop a value from the tail of a list.
+static jack_value_t* list_pop(jack_list_t* list) {
+  jack_list_node_t* tail = list->tail;
+  if (!tail) return NULL;
+  jack_list_node_t *prev = list->tail = tail->prev;
+  jack_value_t* value = tail->value;
+  free(tail);
+  if (prev) prev->next = NULL;
+  else list->head = NULL;
+  list->length--;
+  return value;
+}
+
+// Shift a value from the head of a list
+static jack_value_t* list_shift(jack_list_t* list) {
+  jack_list_node_t* head = list->head;
+  if (!head) return NULL;
+  jack_list_node_t* next = list->head = head->next;
+  jack_value_t* value = head->value;
+  free(head);
+  if (next) next->prev = NULL;
+  else list->tail = NULL;
+  list->length--;
+  return value;
 }
 
 static void set_add(jack_set_t* set, jack_value_t* value) {
@@ -305,7 +353,7 @@ void jack_dump_value(jack_value_t *value) {
       printf("Buffer[%d] %p", value->buffer->length, value->buffer->data);
       break;
     case List: {
-      jack_node_t *node = value->list->head;
+      jack_list_node_t *node = value->list->head;
       printf("[");
       int count = 0;
       while (node) {
@@ -384,9 +432,6 @@ void jack_new_symbol(jack_state_t *state, const char* symbol) {
   ref_value(state_push(state, new_symbol(strlen(symbol), symbol)));
 };
 
-void jack_new_list(jack_state_t *state) {
-  ref_value(state_push(state, new_list()));
-}
 
 void jack_new_set(jack_state_t *state, int num_buckets) {
   ref_value(state_push(state, new_set(num_buckets)));
@@ -396,10 +441,28 @@ void jack_new_map(jack_state_t *state, int num_buckets) {
   ref_value(state_push(state, new_map(num_buckets)));
 }
 
-// Pop the value from the top of the stack and push on the list at [index]
+void jack_new_list(jack_state_t *state) {
+  ref_value(state_push(state, new_list()));
+}
+int jack_list_length(jack_state_t *state, int index) {
+  jack_list_t* list = state_get_as(state, List, index)->list;
+  return list->length;
+}
 void jack_list_push(jack_state_t *state, int index) {
   jack_list_t* list = state_get_as(state, List, index)->list;
   list_push(list, state_pop(state));
+}
+void jack_list_insert(jack_state_t *state, int index) {
+  jack_list_t* list = state_get_as(state, List, index)->list;
+  list_insert(list, state_pop(state));
+}
+void jack_list_pop(jack_state_t *state, int index) {
+  jack_list_t* list = state_get_as(state, List, index)->list;
+  state_push(state, list_pop(list));
+}
+void jack_list_shift(jack_state_t *state, int index) {
+  jack_list_t* list = state_get_as(state, List, index)->list;
+  state_push(state, list_shift(list));
 }
 
 // Pop the value from the top of the stack and add it to the set at [index].

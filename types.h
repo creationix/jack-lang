@@ -27,6 +27,12 @@ typedef struct jack_node_s {
   struct jack_node_s *next;
 } jack_node_t;
 
+typedef struct jack_list_node_s {
+  struct jack_value_s *value;
+  struct jack_list_node_s *prev;
+  struct jack_list_node_s *next;
+} jack_list_node_t;
+
 typedef struct jack_pair_s {
   struct jack_value_s *key;
   struct jack_value_s *value;
@@ -34,16 +40,19 @@ typedef struct jack_pair_s {
 } jack_pair_t;
 
 typedef struct {
-  jack_node_t *head;
-  jack_node_t *tail;
+  int length;
+  jack_list_node_t *head;
+  jack_list_node_t *tail;
 } jack_list_t;
 
 typedef struct {
+  int length;
   int num_buckets;
   jack_node_t* buckets[];
 } jack_set_t;
 
 typedef struct {
+  int length;
   int num_buckets;
   jack_pair_t* buckets[];
 } jack_map_t;
