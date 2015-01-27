@@ -46,33 +46,13 @@ int jack_list_pop(jack_state_t *state, int index);
 int jack_list_shift(jack_state_t *state, int index);
 
 
-// Set is an unordered collection of unique values.
-// All operations work with set at stack[index] and value at top.
-
-// Create a new empty set with `num_buckets` sized hashtable.
-// [0,+1] Pushes new set on stack.
-void jack_new_set(jack_state_t *state, int num_buckets);
-// Read the length of the set quickly.
-// [0,0] No changes to stack.
-int jack_set_length(jack_state_t *state, int index);
-// Add a new item to the set, returns true if it wasn't there already.
-// [-1,0] Pops value from stack.
-bool jack_set_add(jack_state_t *state, int index);
-// Remove an item from the set, returns true if it was there.
-// [-1,0] Pops value from stack.
-bool jack_set_delete(jack_state_t *state, int index);
-// Returns true if value at top of stack is in set.
-// [-1,0] Pops value from stack.
-bool jack_set_has(jack_state_t *state, int index);
-
-
 // Map is an unordered collection of unique keys with associated values.
 // All operations work with map at stack[index] and value at top.
 
 // Create a new empty map with `num_buckets` sized hashtable.
 // [0,+1] Pushes map on stack
 void jack_new_map(jack_state_t *state, int num_buckets);
-// Read the length of the set quickly.
+// Read the length of the map quickly.
 // [0,0] No changes to stack
 int jack_map_length(jack_state_t *state, int index);
 // Add or replace entry.

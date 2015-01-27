@@ -66,20 +66,10 @@ static jack_value_t* new_list() {
   return value;
 }
 
-static jack_value_t* new_set(int num_buckets) {
-  jack_value_t *value = malloc(sizeof(*value));
-  value->type = Set;
-  size_t size = sizeof(jack_set_t) + sizeof(jack_node_t*) * num_buckets;
-  value->set = malloc(size);
-  memset(value->set, 0, size);
-  value->set->num_buckets = num_buckets;
-  return value;
-}
-
 static jack_value_t* new_map(int num_buckets) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Map;
-  size_t size = sizeof(jack_set_t) + sizeof(jack_pair_t*) * num_buckets;
+  size_t size = sizeof(jack_map_t) + sizeof(jack_pair_t*) * num_buckets;
   value->map = malloc(size);
   memset(value->map, 0, size);
   value->map->num_buckets = num_buckets;
@@ -95,20 +85,6 @@ static void free_list(jack_list_t* list) {
     node = next;
   }
   free(list);
-}
-
-static void free_set(jack_set_t* set) {
-  int i;
-  for (i = 0; i < set->num_buckets; ++i) {
-    jack_node_t* node = set->buckets[i];
-    while (node) {
-      jack_node_t* next = node->next;
-      unref_value(node->value);
-      free(node);
-      node = next;
-    }
-  }
-  free(set);
 }
 
 static void free_map(jack_map_t* map) {
@@ -145,9 +121,6 @@ static void free_value(jack_value_t* value) {
       break;
     case List:
       free_list(value->list);
-      break;
-    case Set:
-      free_set(value->set);
       break;
     case Map:
       free_map(value->map);
@@ -256,59 +229,6 @@ static jack_value_t* list_shift(jack_list_t* list) {
   return value;
 }
 
-static bool set_add(jack_set_t* set, jack_value_t* value) {
-  // Look for the value in the hash bucket
-  jack_node_t **parent = &(set->buckets[hash_value(value) % set->num_buckets]);
-  jack_node_t *node = *parent;
-  while (node) {
-    // If the value is already in the slot, don't use it. The caller assumes
-    // we will ref the value.  Since We're not doing, we need to unref the
-    // value.
-    if (value_is_equal(value, node->value)) {
-      unref_value(value);
-      return false;
-    }
-    // Otherwise keep looking.
-    parent = &node->next;
-    node = *parent;
-  }
-
-  // It wasn't there, append to the list.
-  node = malloc(sizeof(*node));
-  node->value = value;
-  node->next = NULL;
-  *parent = node;
-  return true;
-}
-
-static bool set_delete(jack_set_t* set, jack_value_t* value) {
-  // Look for the value in the hash bucket
-  jack_node_t **parent = &(set->buckets[hash_value(value) % set->num_buckets]);
-  jack_node_t *node = *parent;
-  while (node) {
-    if (value_is_equal(value, node->value)) {
-      *parent = node->next;
-      unref_value(node->value);
-      free(node);
-      return true;
-    }
-    // Otherwise keep looking.
-    parent = &node->next;
-    node = *parent;
-  }
-  return false;
-}
-
-
-static bool set_has(jack_set_t* set, jack_value_t* value) {
-  jack_node_t *node = set->buckets[hash_value(value) % set->num_buckets];
-  while (node) {
-    if (value_is_equal(value, node->value)) return true;
-    node = node->next;
-  }
-  return false;
-}
-
 static bool map_set(jack_map_t* map, jack_value_t* key, jack_value_t* value) {
 
   // Look for the key in the hash bucket
@@ -404,21 +324,6 @@ void jack_dump_value(jack_value_t *value) {
       printf("]");
       break;
     }
-    case Set: {
-      jack_set_t *set = value->set;
-      printf("(");
-      int i, count = 0;
-      for (i = 0; i < set->num_buckets; ++i) {
-        jack_node_t *node = set->buckets[i];
-        while (node) {
-          if (count++) printf(", ");
-          jack_dump_value(node->value);
-          node = node->next;
-        }
-      }
-      printf(")");
-      break;
-    }
     case Map: {
       jack_map_t *map = value->map;
       printf("{");
@@ -500,27 +405,6 @@ int jack_list_shift(jack_state_t *state, int index) {
   state_push(state, list_shift(list));
   return list->length;
 }
-
-void jack_new_set(jack_state_t *state, int num_buckets) {
-  ref_value(state_push(state, new_set(num_buckets)));
-}
-int jack_set_length(jack_state_t *state, int index) {
-  jack_set_t* set = state_get_as(state, Set, index)->set;
-  return set->length;
-}
-bool jack_set_add(jack_state_t *state, int index) {
-  jack_set_t* set = state_get_as(state, Set, index)->set;
-  return set_add(set, state_pop(state));
-}
-bool jack_set_delete(jack_state_t *state, int index) {
-  jack_set_t* set = state_get_as(state, Set, index)->set;
-  return set_delete(set, state_pop(state));
-}
-bool jack_set_has(jack_state_t *state, int index) {
-  jack_set_t* set = state_get_as(state, Set, index)->set;
-  return set_has(set, state_pop(state));
-}
-
 
 void jack_new_map(jack_state_t *state, int num_buckets) {
   ref_value(state_push(state, new_map(num_buckets)));

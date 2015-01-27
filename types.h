@@ -15,7 +15,6 @@ typedef enum {
   String,
   Symbol,
   List,
-  Set,
   Map,
   Function,
 } jack_type_t;
@@ -48,12 +47,6 @@ typedef struct {
 typedef struct {
   int length;
   int num_buckets;
-  jack_node_t* buckets[];
-} jack_set_t;
-
-typedef struct {
-  int length;
-  int num_buckets;
   jack_pair_t* buckets[];
 } jack_map_t;
 
@@ -77,7 +70,6 @@ typedef struct jack_value_s {
     intptr_t integer;
     jack_buffer_t *buffer;
     jack_list_t *list;
-    jack_set_t *set;
     jack_map_t *map;
     jack_function_t *function;
   };

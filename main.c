@@ -21,18 +21,6 @@ int main() {
     jack_list_push(state, -2);
   }
 
-  jack_new_set(state, 10);
-  jack_new_cstring(state, "Apple");
-  jack_set_add(state, -2);
-  jack_new_symbol(state, "Orange");
-  jack_set_add(state, -2);
-  jack_new_cstring(state, "Grape");
-  jack_set_add(state, -2);
-  jack_new_cstring(state, "Cherry");
-  jack_set_add(state, -2);
-  jack_new_symbol(state, "Orange");
-  jack_set_add(state, -2);
-
   jack_new_map(state, 10);
 
   // map.name = "Tim Caswell"
@@ -60,25 +48,16 @@ int main() {
   jack_dump_state(state);
 
   jack_new_symbol(state, "eat some memory!");
-  for (i = 0; i < 0x1000; ++i) {
-    jack_new_set(state, 10);
-    // S
-    jack_dup(state, -2);
-    // Ss
-    jack_set_add(state, -2);
-    // S
-    jack_new_integer(state, 42);
-    // Si
-    jack_set_add(state, -2);
-    // S
+  for (i = 0; i < 0x100000; ++i) {
     jack_new_list(state);
-    // SL
-    jack_new_cstring(state, "numbers!");
-    // SLs
+    jack_dup(state, -2);
+    jack_list_insert(state, -2);
+    jack_new_integer(state, 42);
     jack_list_push(state, -2);
-    // SL
-    jack_set_add(state, -2);
-    // S
+    jack_new_list(state);
+    jack_new_cstring(state, "numbers!");
+    jack_list_push(state, -2);
+    jack_list_insert(state, -2);
     jack_pop(state);
   }
 
