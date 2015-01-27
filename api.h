@@ -14,7 +14,7 @@ jack_state_t* jack_new_state(int slots);
 void jack_dump_value(jack_value_t *value);
 void jack_dump_state(jack_state_t *state);
 
-void jack_new_integer(jack_state_t *state, int64_t integer);
+void jack_new_integer(jack_state_t *state, intptr_t integer);
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data);
 void jack_new_string(jack_state_t *state, size_t length, const char* string);
 void jack_new_cstring(jack_state_t *state, const char* string);
@@ -31,6 +31,6 @@ void jack_map_get(jack_state_t *state, int index);
 void jack_pop(jack_state_t *state);
 void jack_dup(jack_state_t *state, int index);
 
-int64_t jack_get_integer(jack_state_t *state, int index);
+intptr_t jack_get_integer(jack_state_t *state, int index);
 
 #endif

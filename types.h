@@ -1,6 +1,7 @@
 #ifndef JACK_TYPES_H
 #define JACK_TYPES_H
 
+#include <stdint.h>
 #include <stdlib.h>
 
 // REF_COUNT must be larger than the largest enum value below.
@@ -64,7 +65,7 @@ typedef struct jack_value_s {
     int ref_count;
   };
   union {
-    int64_t integer;
+    intptr_t integer;
     jack_buffer_t *buffer;
     jack_list_t *list;
     jack_set_t *set;

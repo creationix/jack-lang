@@ -23,7 +23,7 @@ static jack_value_t* unref_value(jack_value_t *value) {
   return NULL;
 }
 
-static jack_value_t* new_integer(int64_t integer) {
+static jack_value_t* new_integer(intptr_t integer) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Integer;
   value->integer = integer;
@@ -364,7 +364,7 @@ void jack_dump_state(jack_state_t *state) {
   printf("\n");
 }
 
-void jack_new_integer(jack_state_t *state, int64_t integer) {
+void jack_new_integer(jack_state_t *state, intptr_t integer) {
   ref_value(state_push(state, new_integer(integer)));
 };
 
@@ -430,6 +430,6 @@ void jack_dup(jack_state_t *state, int index) {
   ref_value(state_push(state, state_get(state, index)));
 }
 
-int64_t jack_get_integer(jack_state_t *state, int index) {
+intptr_t jack_get_integer(jack_state_t *state, int index) {
   return state_get_as(state, Integer, index)->integer;
 }
