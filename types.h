@@ -2,6 +2,7 @@
 #define JACK_TYPES_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 // REF_COUNT must be larger than the largest enum value below.
 // Also it must be a power of two for the mask to work.
