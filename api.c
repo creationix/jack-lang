@@ -128,8 +128,7 @@ static void free_value(jack_value_t* value) {
 // Constant is the nearest prime to 2^64 / phi
 // This is a 64-bit modification of knuth's integer hash.
 // The xor shift is to mix entropy to lower bits where it's lacking.
-static unsigned long long hash_value(jack_value_t *value) {
-  unsigned long long integer = value->integer ^ (value->type & JACK_TYPE_MASK);
+static uint64_t hash_integer(uint64_t integer) {
   return 11400714819674759057UL * (integer ^ integer >> 3);
 }
 
@@ -225,7 +224,7 @@ static jack_value_t* list_shift(jack_list_t* list) {
 static bool map_set(jack_map_t* map, jack_value_t* key, jack_value_t* value) {
 
   // Look for the key in the hash bucket
-  jack_pair_t **parent = &(map->buckets[hash_value(key) % map->num_buckets]);
+  jack_pair_t **parent = &(map->buckets[hash_integer(key->integer) % map->num_buckets]);
   jack_pair_t *pair = *parent;
   while (pair) {
     // If the key is already in the slot,
@@ -249,9 +248,14 @@ static bool map_set(jack_map_t* map, jack_value_t* key, jack_value_t* value) {
   return true;
 }
 
+static bool map_set_symbol(jack_map_t* map, const char* symbol, jack_value_t* value) {
+  jack_value_t* key = ref_value(new_symbol(strlen(symbol), symbol));
+  return map_set(map, key, value);
+}
+
 static jack_value_t* map_get(jack_map_t* map, jack_value_t* key) {
   // Look for the key in the hash bucket
-  jack_pair_t *pair = map->buckets[hash_value(key) % map->num_buckets];
+  jack_pair_t *pair = map->buckets[hash_integer(key->integer) % map->num_buckets];
   while (pair) {
     // When the key is found, return the corresponding value.
     if (value_is_equal(key, pair->key)) return pair->value;
@@ -262,9 +266,14 @@ static jack_value_t* map_get(jack_map_t* map, jack_value_t* key) {
   return NULL;
 }
 
+static jack_value_t* map_get_symbol(jack_map_t* map, const char* symbol) {
+  jack_value_t* key = ref_value(new_symbol(strlen(symbol), symbol));
+  return map_get(map, key);
+}
+
 static bool map_delete(jack_map_t* map, jack_value_t* key) {
   // Look for the key in the hash bucket
-  jack_pair_t **parent = &(map->buckets[hash_value(key) % map->num_buckets]);
+  jack_pair_t **parent = &(map->buckets[hash_integer(key->integer) % map->num_buckets]);
   jack_pair_t *pair = *parent;
   while (pair) {
     if (value_is_equal(key, pair->key)) {
@@ -277,6 +286,11 @@ static bool map_delete(jack_map_t* map, jack_value_t* key) {
     pair = *parent;
   }
   return false;
+}
+
+static bool map_delete_symbol(jack_map_t* map, const char* symbol) {
+  jack_value_t* key = ref_value(new_symbol(strlen(symbol), symbol));
+  return map_delete(map, key);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -401,9 +415,20 @@ bool jack_map_set(jack_state_t *state, int index) {
   jack_value_t* key = state_pop(state);
   return map_set(map, key, value);
 }
+bool jack_map_set_symbol(jack_state_t *state, int index, const char* symbol) {
+  jack_map_t* map = state_get_as(state, Map, index)->map;
+  jack_value_t* value = state_pop(state);
+  return map_set_symbol(map, symbol, value);
+}
 bool jack_map_get(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   jack_value_t* value = map_get(map, state_pop(state));
+  state_push(state, value);
+  return (bool)value;
+}
+bool jack_map_get_symbol(jack_state_t *state, int index, const char* symbol) {
+  jack_map_t* map = state_get_as(state, Map, index)->map;
+  jack_value_t* value = map_get_symbol(map, symbol);
   state_push(state, value);
   return (bool)value;
 }
@@ -411,9 +436,17 @@ bool jack_map_has(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   return (bool)map_get(map, state_pop(state));
 }
+bool jack_map_has_symbol(jack_state_t *state, int index, const char* symbol) {
+  jack_map_t* map = state_get_as(state, Map, index)->map;
+  return (bool)map_get_symbol(map, symbol);
+}
 bool jack_map_delete(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   return map_delete(map, state_pop(state));
+}
+bool jack_map_delete_symbol(jack_state_t *state, int index, const char* symbol) {
+  jack_map_t* map = state_get_as(state, Map, index)->map;
+  return map_delete_symbol(map, symbol);
 }
 
 void jack_pop(jack_state_t *state) {

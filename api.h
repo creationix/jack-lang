@@ -57,17 +57,25 @@ int jack_map_length(jack_state_t *state, int index);
 // Returns true if the key wasn't in the map yet.
 // [-2,0] Pops value and then key from stack (key must be pushed first).
 bool jack_map_set(jack_state_t *state, int index);
+// [-1,0] Pops value from stack. Creates symbol on the fly.
+bool jack_map_set_symbol(jack_state_t *state, int index, const char* symbol);
 // Pop the key from the stack and push the associated value from the map.
 // Pushed NULL if there is no such key.
 // Returns true if the key was found.
 // [-1,+1] Pops key from stack, pushes value on stack.
 bool jack_map_get(jack_state_t *state, int index);
+// [0,+1] Pushes value on stack. Creates symbol on the fly.
+bool jack_map_get_symbol(jack_state_t *state, int index, const char* symbol);
 // Remove an item from the map by key, returns true if it was there.
 // [-1,0] Pops key from stack.
 bool jack_map_delete(jack_state_t *state, int index);
+// [0,0] Doesn't affect stack.  Creates symbol on the fly.
+bool jack_map_delete_symbol(jack_state_t *state, int index, const char* symbol);
 // Returns true if key at top of stack is in map.
 // [-1,0] Pops key from stack.
 bool jack_map_has(jack_state_t *state, int index);
+// [0,0] Doesn't affect stack.  Creates symbol on the fly.
+bool jack_map_has_symbol(jack_state_t *state, int index, const char* symbol);
 
 // Pop and discard the top value in the stack
 // [-1,0] Pops value from stack.

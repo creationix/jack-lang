@@ -24,14 +24,12 @@ int main() {
   jack_new_map(state, 10);
 
   // map.name = "Tim Caswell"
-  jack_new_symbol(state, "name");
   jack_new_symbol(state, "Tim Caswell");
-  jack_map_set(state, -3);
+  jack_map_set_symbol(state, -2, "name");
 
   // map.age = 32
-  jack_new_symbol(state, "age");
   jack_new_integer(state, 32);
-  jack_map_set(state, -3);
+  jack_map_set_symbol(state, -2, "age");
 
   // print map.age
   jack_new_symbol(state, "age");
