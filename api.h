@@ -17,6 +17,7 @@ void jack_dump_value(jack_value_t *value);
 void jack_dump_state(jack_state_t *state);
 
 void jack_new_integer(jack_state_t *state, intptr_t integer);
+void jack_new_boolean(jack_state_t *state, bool boolean);
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data);
 void jack_new_symbol(jack_state_t *state, const char* symbol);
 

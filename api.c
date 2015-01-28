@@ -30,6 +30,13 @@ static jack_value_t* new_integer(intptr_t integer) {
   return value;
 }
 
+static jack_value_t* new_boolean(bool boolean) {
+  jack_value_t *value = malloc(sizeof(*value));
+  value->type = Boolean;
+  value->boolean = boolean;
+  return value;
+}
+
 static jack_value_t* new_buffer(size_t length, const char* data) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Buffer;
@@ -105,7 +112,7 @@ static void free_value(jack_value_t* value) {
   // Recursivly unref children.
   // Also free nested resources.
   switch (value->type) {
-    case Integer: break;
+    case Integer: case Boolean: break;
     case Buffer:
       free(value->buffer);
       break;
@@ -306,12 +313,16 @@ jack_state_t* jack_new_state(int slots) {
 }
 
 void jack_dump_value(jack_value_t *value) {
-  switch (value->type & JACK_TYPE_MASK) {
+  jack_type_t type = value->type & JACK_TYPE_MASK;
+  switch (type) {
     case Symbol:
       printf(":%.*s", value->buffer->length, value->buffer->data);
       break;
     case Integer:
       printf("%ld", value->integer);
+      break;
+    case Boolean:
+      printf("%s", value->boolean ? "true" : "false");
       break;
     case Buffer:
       printf("Buffer[%d] %p", value->buffer->length, value->buffer->data);
@@ -345,8 +356,9 @@ void jack_dump_value(jack_value_t *value) {
       printf("}");
       break;
     }
-    default:
-      printf("Unknown(%d) %p", value->type & JACK_TYPE_MASK, value);
+    case Function: {
+      printf("<function %p>", value->function);
+    }
   }
 
 }
@@ -363,6 +375,10 @@ void jack_dump_state(jack_state_t *state) {
 
 void jack_new_integer(jack_state_t *state, intptr_t integer) {
   ref_value(state_push(state, new_integer(integer)));
+};
+
+void jack_new_boolean(jack_state_t *state, bool boolean) {
+  ref_value(state_push(state, new_boolean(boolean)));
 };
 
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data) {

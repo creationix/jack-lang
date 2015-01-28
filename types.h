@@ -2,6 +2,7 @@
 #define JACK_TYPES_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 // REF_COUNT must be larger than the largest enum value below.
@@ -10,6 +11,7 @@
 #define JACK_REF_COUNT 8
 
 typedef enum {
+  Boolean,
   Integer,
   Buffer,
   Symbol,
@@ -66,6 +68,7 @@ typedef struct jack_value_s {
     int ref_count;
   };
   union {
+    bool boolean;
     intptr_t integer;
     jack_buffer_t *buffer;
     jack_list_t *list;

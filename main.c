@@ -32,10 +32,12 @@ int main() {
   jack_map_set_symbol(state, -2, "age");
 
   // print map.age
-  jack_new_symbol(state, "age");
-  jack_map_get(state, -2);
+  jack_map_get_symbol(state, -1, "age");
   printf("\nage = %ld\n", jack_get_integer(state, -1));
   jack_pop(state);
+
+  jack_new_boolean(state, true);
+  jack_new_boolean(state, false);
 
   jack_dump_state(state);
   jack_pop(state);
@@ -46,7 +48,7 @@ int main() {
   jack_dump_state(state);
 
   jack_new_symbol(state, "eat some memory!");
-  for (i = 0; i < 0x100000; ++i) {
+  for (i = 0; i < 0x1000; ++i) {
     jack_new_list(state);
     jack_dup(state, -2);
     jack_list_insert(state, -2);
@@ -58,6 +60,7 @@ int main() {
     jack_list_insert(state, -2);
     jack_pop(state);
   }
+
 
   return 0;
 }
