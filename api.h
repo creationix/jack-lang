@@ -6,6 +6,7 @@
 #include "types.h"
 
 jack_state_t* jack_new_state(int slots);
+void jack_free_state(jack_state_t *state);
 
 void jack_dump_value(jack_value_t *value);
 void jack_dump_state(jack_state_t *state);
@@ -14,6 +15,14 @@ void jack_new_integer(jack_state_t *state, intptr_t integer);
 void jack_new_boolean(jack_state_t *state, bool boolean);
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data);
 void jack_new_symbol(jack_state_t *state, const char* symbol);
+
+
+void jack_new_native(jack_state_t *state, jack_native_t *native);
+// Call native function.  Function is at top of stack right below arguments.
+// Arguments are popped in reverse order, pushed in normal order.
+// The native function gets it's own state and stack.
+// [-n,+m] Pop's argc + 1 items from stack and pushes return value number of items back on.
+int jack_native_call(jack_state_t *state, int argc);
 
 // List is a doubly linked list of jack values
 // All operations work with list at stack[index].

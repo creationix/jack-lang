@@ -76,6 +76,13 @@ static jack_value_t* new_map(int num_buckets) {
   return value;
 }
 
+static jack_value_t* new_native(jack_native_t *native) {
+  jack_value_t *value = malloc(sizeof(*value));
+  value->type = Native;
+  value->native = native;
+  return value;
+}
+
 static void free_list(jack_list_t* list) {
   jack_node_t* node = list->head;
   while (node) {
@@ -112,7 +119,7 @@ static void free_value(jack_value_t* value) {
   // Recursivly unref children.
   // Also free nested resources.
   switch (value->type) {
-    case Integer: case Boolean:
+    case Integer: case Boolean: case Native:
       break;
     case Buffer:
       free(value->buffer);
@@ -313,6 +320,14 @@ jack_state_t* jack_new_state(int slots) {
   return state;
 }
 
+void jack_free_state(jack_state_t *state) {
+  for (int i = 0; i < state->filled; ++i) {
+    unref_value(state->stack[i]);
+  }
+  free(state->stack);
+  free(state);
+}
+
 void jack_dump_value(jack_value_t *value) {
   jack_type_t type = value->type & JACK_TYPE_MASK;
   switch (type) {
@@ -357,9 +372,12 @@ void jack_dump_value(jack_value_t *value) {
       printf("}");
       break;
     }
-    case Function: {
+    case Native:
+      printf("<native %p>", value->native);
+      break;
+    case Function:
       printf("<function %p>", value->function);
-    }
+      break;
   }
 
 }
@@ -390,6 +408,42 @@ void jack_new_symbol(jack_state_t *state, const char* symbol) {
   ref_value(state_push(state, new_symbol(strlen(symbol), symbol)));
 };
 
+
+void jack_new_native(jack_state_t *state, jack_native_t *native) {
+  ref_value(state_push(state, new_native(native)));
+}
+int jack_native_call(jack_state_t *state, int argc) {
+  // Make sure there are enough slots and verify type of Native slot.
+  int index = state->filled - argc - 1;
+  assert(index >= 0 && (state->stack[index]->type & JACK_TYPE_MASK) == Native);
+
+  // Create a new state for the function call.
+  jack_state_t *new_state = jack_new_state(10 + argc);
+
+  // Grab a reference to the native function
+  jack_native_t* native = state->stack[index]->native;
+  // Move the arguments to the new stack.
+  for (int i = 0; i < argc; i++) {
+    new_state->stack[i] = state->stack[index + 1 + argc];
+  }
+  // Truncate the state
+  state->filled = index;
+
+  // Call the native function
+  int retc = native(new_state, argc);
+
+  int new_index = new_state->filled - retc;
+  for (int i = 0; i < new_state->filled; ++i) {
+    // Unref unused slots in the temporary state
+    if (i < new_index) unref_value(new_state->stack[i]);
+    // Move the returned slots
+    else state->stack[state->filled++] = new_state->stack[i];
+  }
+  new_state->filled = 0;
+  jack_free_state(new_state);
+
+  return retc;
+}
 
 void jack_new_list(jack_state_t *state) {
   ref_value(state_push(state, new_list()));

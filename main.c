@@ -2,9 +2,17 @@
 
 #include "api.h"
 
+static int sample_function(jack_state_t *state, int argc) {
+  printf("This is a native function!!!\n");
+  printf("It was called in state %p with %d arg(s)\n", state, argc);
+  jack_new_boolean(state, true);
+  jack_new_symbol(state, "My Result");
+  return 2;
+}
+
 int main() {
 
-  jack_state_t* state = jack_new_state(10);
+  jack_state_t* state = jack_new_state(15);
 
   jack_new_symbol(state, "Hello World");
   jack_new_buffer(state, 5, "12345");
@@ -19,6 +27,13 @@ int main() {
     jack_new_integer(state, i);
     jack_list_push(state, -2);
   }
+
+  jack_new_native(state, sample_function);
+  jack_new_boolean(state, false);
+
+  jack_dump_state(state);
+  jack_native_call(state, 1);
+  jack_dump_state(state);
 
   jack_new_map(state, 10);
 
