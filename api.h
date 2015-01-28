@@ -5,12 +5,6 @@
 #include <stdbool.h>
 #include "types.h"
 
-typedef struct {
-  int slots;  // Total number of slots in stack
-  int filled; // Number of filled slots in stack
-  jack_value_t** stack;
-} jack_state_t;
-
 jack_state_t* jack_new_state(int slots);
 
 void jack_dump_value(jack_value_t *value);

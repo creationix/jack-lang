@@ -10,6 +10,14 @@
 #define JACK_TYPE_MASK  7
 #define JACK_REF_COUNT 8
 
+struct jack_value_s;
+
+typedef struct {
+  int slots;  // Total number of slots in stack
+  int filled; // Number of filled slots in stack
+  struct jack_value_s** stack;
+} jack_state_t;
+
 typedef enum {
   Boolean,
   Integer,
@@ -20,31 +28,28 @@ typedef enum {
   Function,
 } jack_type_t;
 
-struct jack_value_s;
-
+// Nodes in the doubly linked list
 typedef struct jack_node_s {
   struct jack_value_s *value;
+  struct jack_node_s *prev;
   struct jack_node_s *next;
 } jack_node_t;
 
-typedef struct jack_list_node_s {
-  struct jack_value_s *value;
-  struct jack_list_node_s *prev;
-  struct jack_list_node_s *next;
-} jack_list_node_t;
+// The list container
+typedef struct {
+  int length;
+  jack_node_t *head;
+  jack_node_t *tail;
+} jack_list_t;
 
+// Pairs in the singly-linked lists in the hastable buckets.
 typedef struct jack_pair_s {
   struct jack_value_s *key;
   struct jack_value_s *value;
   struct jack_pair_s *next;
 } jack_pair_t;
 
-typedef struct {
-  int length;
-  jack_list_node_t *head;
-  jack_list_node_t *tail;
-} jack_list_t;
-
+// Map container as a hash table of pair chains.
 typedef struct {
   int length;
   int num_buckets;
@@ -57,7 +62,8 @@ typedef struct {
 } jack_buffer_t;
 
 typedef struct {
-  // TODO: design
+  int length;
+  uint32_t bytecodes[];
 } jack_function_t;
 
 typedef struct jack_value_s {

@@ -77,9 +77,9 @@ static jack_value_t* new_map(int num_buckets) {
 }
 
 static void free_list(jack_list_t* list) {
-  jack_list_node_t* node = list->head;
+  jack_node_t* node = list->head;
   while (node) {
-    jack_list_node_t* next = node->next;
+    jack_node_t* next = node->next;
     unref_value(node->value);
     free(node);
     node = next;
@@ -112,7 +112,8 @@ static void free_value(jack_value_t* value) {
   // Recursivly unref children.
   // Also free nested resources.
   switch (value->type) {
-    case Integer: case Boolean: break;
+    case Integer: case Boolean:
+      break;
     case Buffer:
       free(value->buffer);
       break;
@@ -172,7 +173,7 @@ static jack_value_t* state_get_as(jack_state_t* state, jack_type_t type, int ind
 
 // Append a value to the tail of a list.
 static void list_push(jack_list_t* list, jack_value_t* value) {
-  jack_list_node_t *node = malloc(sizeof(*node));
+  jack_node_t *node = malloc(sizeof(*node));
   node->value = value;
   node->next = NULL;
   node->prev = list->tail;
@@ -188,7 +189,7 @@ static void list_push(jack_list_t* list, jack_value_t* value) {
 
 // Insert a value to the head of a list
 static void list_insert(jack_list_t* list, jack_value_t* value) {
-  jack_list_node_t *node = malloc(sizeof(*node));
+  jack_node_t *node = malloc(sizeof(*node));
   node->value = value;
   node->next = list->head;
   node->prev = NULL;
@@ -204,9 +205,9 @@ static void list_insert(jack_list_t* list, jack_value_t* value) {
 
 // Pop a value from the tail of a list.
 static jack_value_t* list_pop(jack_list_t* list) {
-  jack_list_node_t* tail = list->tail;
+  jack_node_t* tail = list->tail;
   if (!tail) return NULL;
-  jack_list_node_t *prev = list->tail = tail->prev;
+  jack_node_t *prev = list->tail = tail->prev;
   jack_value_t* value = tail->value;
   free(tail);
   if (prev) prev->next = NULL;
@@ -217,9 +218,9 @@ static jack_value_t* list_pop(jack_list_t* list) {
 
 // Shift a value from the head of a list
 static jack_value_t* list_shift(jack_list_t* list) {
-  jack_list_node_t* head = list->head;
+  jack_node_t* head = list->head;
   if (!head) return NULL;
-  jack_list_node_t* next = list->head = head->next;
+  jack_node_t* next = list->head = head->next;
   jack_value_t* value = head->value;
   free(head);
   if (next) next->prev = NULL;
@@ -328,7 +329,7 @@ void jack_dump_value(jack_value_t *value) {
       printf("Buffer[%d] %p", value->buffer->length, value->buffer->data);
       break;
     case List: {
-      jack_list_node_t *node = value->list->head;
+      jack_node_t *node = value->list->head;
       printf("[");
       int count = 0;
       while (node) {
@@ -439,13 +440,13 @@ bool jack_map_set_symbol(jack_state_t *state, int index, const char* symbol) {
 bool jack_map_get(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   jack_value_t* value = map_get(map, state_pop(state));
-  state_push(state, value);
+  state_push(state, ref_value(value));
   return (bool)value;
 }
 bool jack_map_get_symbol(jack_state_t *state, int index, const char* symbol) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   jack_value_t* value = map_get_symbol(map, symbol);
-  state_push(state, value);
+  state_push(state, ref_value(value));
   return (bool)value;
 }
 bool jack_map_has(jack_state_t *state, int index) {
@@ -470,7 +471,7 @@ void jack_pop(jack_state_t *state) {
 }
 
 void jack_dup(jack_state_t *state, int index) {
-  ref_value(state_push(state, state_get(state, index)));
+  ref_value(state_push(state, ref_value(state_get(state, index))));
 }
 
 intptr_t jack_get_integer(jack_state_t *state, int index) {
