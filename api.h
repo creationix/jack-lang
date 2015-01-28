@@ -24,6 +24,11 @@ void jack_new_native(jack_state_t *state, jack_native_t *native);
 // [-n,+m] Pop's argc + 1 items from stack and pushes return value number of items back on.
 int jack_native_call(jack_state_t *state, int argc);
 
+// Create a new exec value with stateful area and C behavior area.
+void* jack_new_exec(jack_state_t *state, jack_function_t *function, size_t size);
+// Works same as jack_native_call, but on stateful exec value.
+int jack_exec_call(jack_state_t *state, int argc);
+
 // List is a doubly linked list of jack values
 // All operations work with list at stack[index].
 // If the list if empty when reading, NULL is put on stack.

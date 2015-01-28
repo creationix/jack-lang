@@ -12,7 +12,6 @@
 
 struct jack_value_s;
 
-
 typedef struct {
   int slots;  // Total number of slots in stack
   int filled; // Number of filled slots in stack
@@ -20,6 +19,7 @@ typedef struct {
 } jack_state_t;
 
 typedef int (jack_native_t)(jack_state_t *state, int argc);
+typedef int (jack_function_t)(jack_state_t *state, void* data, int argc);
 
 typedef enum {
   Boolean,
@@ -28,8 +28,8 @@ typedef enum {
   Symbol,
   List,
   Map,
-  Function,
   Native,
+  Function,
 } jack_type_t;
 
 // Nodes in the doubly linked list
@@ -66,9 +66,9 @@ typedef struct {
 } jack_buffer_t;
 
 typedef struct {
-  int length;
-  uint32_t bytecodes[];
-} jack_function_t;
+  jack_function_t* function;
+  char data[];
+} jack_exec_t;
 
 typedef struct jack_value_s {
   // type and ref_count are packed together.
@@ -85,6 +85,7 @@ typedef struct jack_value_s {
     jack_map_t *map;
     jack_function_t *function;
     jack_native_t *native;
+    jack_exec_t *exec;
   };
 } jack_value_t;
 
