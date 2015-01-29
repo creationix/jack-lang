@@ -190,9 +190,7 @@ static jack_value_t* state_get(jack_state_t* state, int index) {
 }
 
 static jack_value_t* state_get_as(jack_state_t* state, jack_type_t type, int index) {
-  jack_dump_state(state);
   jack_value_t *value = state_get(state, index);
-  jack_dump_state(state);
   assert(get_type(value) == type);
   return value;
 }
@@ -605,7 +603,9 @@ bool jack_map_set_symbol(jack_state_t *state, int index, const char* symbol) {
 }
 bool jack_map_get(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
-  jack_value_t* value = map_get(map, state_pop(state));
+  jack_value_t* key = state_pop(state);
+  jack_value_t* value = map_get(map, key);
+  unref_value(key);
   new_value(state, value);
   return (bool)value;
 }

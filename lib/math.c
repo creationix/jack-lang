@@ -17,8 +17,10 @@ cache[i] = fib(i - 1) + fib(i - 2)
 print(fib(42))
 
 */
-#include "../api.h"
 #include <assert.h>
+#include <stdio.h>
+
+#include "../api.h"
 
 static int add(jack_state_t *state) {
   jack_new_integer(state,
@@ -29,10 +31,11 @@ static int add(jack_state_t *state) {
 
 // Manually converted to C API
 static int fib(jack_state_t *state) {
-  jack_dump_state(state);
+
   // 0 - cache map
   // 1 - index
-  int i = jack_get_integer(state, 1);
+  intptr_t i = jack_get_integer(state, 1);
+  printf("fib %ld\n", i);
   if (i < 2) {
     jack_new_integer(state, 1);
     return 1;
@@ -53,8 +56,8 @@ static int fib(jack_state_t *state) {
   jack_call(state, fib, 2);
 
   jack_call(state, add, 2);
-  jack_dump_state(state);
 
+  // Store value in the cache
   jack_dup(state, 1);
   jack_dup(state, -2);
   jack_map_set(state, 0);
@@ -68,6 +71,5 @@ int jack_math(jack_state_t *state) {
   jack_new_map(state, 10);
   jack_new_function(state, fib, 1);
   jack_map_set_symbol(state, -2, "fib");
-  jack_dump_state(state);
   return 1;
 }
