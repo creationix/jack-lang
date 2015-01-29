@@ -16,6 +16,7 @@ static jack_type_t get_type(jack_value_t* value) {
 static void free_value(jack_value_t* value);
 
 static jack_value_t* ref_value(jack_value_t *value) {
+  if (!value) return value;
   value->ref_count += JACK_REF_COUNT;
   return value;
 }
@@ -189,7 +190,9 @@ static jack_value_t* state_get(jack_state_t* state, int index) {
 }
 
 static jack_value_t* state_get_as(jack_state_t* state, jack_type_t type, int index) {
+  jack_dump_state(state);
   jack_value_t *value = state_get(state, index);
+  jack_dump_state(state);
   assert(get_type(value) == type);
   return value;
 }
@@ -304,7 +307,9 @@ static jack_value_t* map_get(jack_map_t* map, jack_value_t* key) {
 
 static jack_value_t* map_get_symbol(jack_map_t* map, const char* symbol) {
   jack_value_t* key = ref_value(new_symbol(strlen(symbol), symbol));
-  return map_get(map, key);
+  jack_value_t* value = map_get(map, key);
+  unref_value(key);
+  return value;
 }
 
 static bool map_delete(jack_map_t* map, jack_value_t* key) {
@@ -326,7 +331,9 @@ static bool map_delete(jack_map_t* map, jack_value_t* key) {
 
 static bool map_delete_symbol(jack_map_t* map, const char* symbol) {
   jack_value_t* key = ref_value(new_symbol(strlen(symbol), symbol));
-  return map_delete(map, key);
+  bool res = map_delete(map, key);
+  unref_value(key);
+  return res;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -336,8 +343,9 @@ static bool map_delete_symbol(jack_map_t* map, const char* symbol) {
 jack_state_t* jack_new_state(int slots) {
   jack_state_t *state = malloc(sizeof(*state));
   memset(state, 0, sizeof(*state));
-  jack_stack_t *stack = malloc(sizeof(*stack) + sizeof(jack_value_t*) * slots);
-  state->stack = stack;
+  size_t size = sizeof(jack_stack_t) + sizeof(jack_value_t*) * slots;
+  jack_stack_t *stack = state->stack = malloc(size);
+  memset(stack, 0, size);
   stack->length = slots;
   stack->top = 0;
   return state;
@@ -478,11 +486,7 @@ jack_function_t* jack_new_function(jack_state_t *state, jack_call_t *call, int a
   return new_value(state, value)->function;
 }
 
-int jack_function_call(jack_state_t *state, int index, int argc) {
-
-  // Grab a reference to the native function
-  jack_function_t* function = state_get_as(state, Function, index)->function;
-
+static int do_call(jack_state_t* state, jack_function_t* function, int argc) {
   int old_top = function->state->stack->top;
 
   // Move the arguments to the function's state
@@ -506,8 +510,16 @@ int jack_function_call(jack_state_t *state, int index, int argc) {
   return retc;
 }
 
+int jack_function_call(jack_state_t *state, int index, int argc) {
+  return do_call(state, state_get_as(state, Function, index)->function, argc);
+}
 
-
+int jack_call(jack_state_t *state, jack_call_t *call, int argc) {
+  jack_value_t* value = new_function(call, argc + 10);
+  int retc = do_call(state, value->function, argc);
+  free_value(value);
+  return retc;
+}
 
 void jack_new_list(jack_state_t *state) {
   new_value(state, new_list());

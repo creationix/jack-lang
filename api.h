@@ -31,6 +31,9 @@ jack_function_t* jack_new_function(jack_state_t *state, jack_call_t *call, int a
 // Arguments are popped in reverse order, pushed in normal order.
 // [-n,+m] Pop's argc items from stack and pushes retc items on.
 int jack_function_call(jack_state_t *state, int index, int argc);
+// Call a C function pointer directly
+// [-n,+m] Pop's argc items from stack and pushes retc items on.
+int jack_call(jack_state_t *state, jack_call_t *call, int argc);
 
 // List is a doubly linked list of jack values
 // All operations work with list at stack[index].
@@ -109,6 +112,7 @@ void jack_popn(jack_state_t *state, int count);
 void jack_dup(jack_state_t *state, int index);
 
 
+// [-x,0] [0,+x] Move num items from one stack to another. (preserving order)
 void jack_xmove(jack_state_t *from, jack_state_t *to, int num);
 
 jack_type_t jack_get_type(jack_state_t *state, int index);
