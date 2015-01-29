@@ -107,11 +107,14 @@ void jack_popn(jack_state_t *state, int count);
 // Duplicate value in stack at [index] and push to top of stack.
 // [0,+1] Pushes duplicate on stack.
 void jack_dup(jack_state_t *state, int index);
-// Returns true if slot is nil.
-bool jack_is_nil(jack_state_t *state, int index);
+
 
 void jack_xmove(jack_state_t *from, jack_state_t *to, int num);
 
+jack_type_t jack_get_type(jack_state_t *state, int index);
 intptr_t jack_get_integer(jack_state_t *state, int index);
+bool jack_get_boolean(jack_state_t *state, int index);
+const char* jack_get_symbol(jack_state_t *state, int index, int* size);
+char* jack_get_buffer(jack_state_t *state, int index, int* size);
 
 #endif

@@ -16,11 +16,11 @@ struct bucket {
 static struct bucket* internment[JACK_INTERNMENT_SIZE];
 
 // djb2 with xor modification http://www.cse.yorku.ca/~oz/hash.html
-static unsigned long string_hash(int length, const char* string) {
+static unsigned long string_hash(int size, const char* string) {
   return 0;
   unsigned long hash = 5381;
   int i;
-  for (i = 0; i < length; ++i) {
+  for (i = 0; i < size; ++i) {
     // hash * 33 xor c
     hash = ((hash << 5) + hash) ^ string[i];
   }
@@ -32,7 +32,7 @@ jack_buffer_t* jack_intern(int len, const char *string) {
   int index = hash % JACK_INTERNMENT_SIZE;
   struct bucket *bucket = internment[index];
   while (bucket) {
-    if (bucket->hash == hash && bucket->buffer.length == len &&
+    if (bucket->hash == hash && bucket->buffer.size == len &&
       strncmp(string, bucket->buffer.data, len) == 0) {
       bucket->count++;
       return &bucket->buffer;
@@ -43,7 +43,7 @@ jack_buffer_t* jack_intern(int len, const char *string) {
   struct bucket *new_bucket = malloc(sizeof(*bucket) + len);
   new_bucket->count = 1;
   memcpy(new_bucket->buffer.data, string, len);
-  new_bucket->buffer.length = len;
+  new_bucket->buffer.size = len;
   new_bucket->hash = hash;
   new_bucket->next = NULL;
   if (bucket) {
@@ -56,7 +56,7 @@ jack_buffer_t* jack_intern(int len, const char *string) {
 }
 
 void jack_unintern(jack_buffer_t *buffer) {
-  unsigned long hash = string_hash(buffer->length, buffer->data);
+  unsigned long hash = string_hash(buffer->size, buffer->data);
   int index = hash % JACK_INTERNMENT_SIZE;
   struct bucket **parent = &(internment[index]);
   struct bucket *bucket = *parent;
@@ -81,7 +81,7 @@ void jack_dump_internment() {
     struct bucket *bucket = internment[i];
     printf("%d: ", i);
     while (bucket) {
-      printf("%.*s(%d) ", bucket->buffer.length, bucket->buffer.data, bucket->count);
+      printf("%.*s(%d) ", bucket->buffer.size, bucket->buffer.data, bucket->count);
       bucket = bucket->next;
     }
     printf("\n");

@@ -52,7 +52,7 @@ int main() {
     int retn = jack_function_call(state, -1, 0);
     printf("\nAfter iteration\n");
     jack_dump_state(state);
-    if (jack_is_nil(state, -1)) {
+    if (jack_get_type(state, -1) == Nil) {
       jack_popn(state, retn + 1);
       break;
     }
@@ -70,7 +70,7 @@ int main() {
     int retn = jack_function_call(state, -1, 0);
     printf("\nAfter iteration\n");
     jack_dump_state(state);
-    if (jack_is_nil(state, -1)) {
+    if (jack_get_type(state, -1) == Nil) {
       jack_popn(state, retn + 2);
       break;
     }
@@ -100,7 +100,7 @@ int main() {
     int retn = jack_function_call(state, -1, 0);
     printf("\nAfter iteration\n");
     jack_dump_state(state);
-    if (jack_is_nil(state, -1)) {
+    if (jack_get_type(state, -1) == Nil) {
       jack_popn(state, retn + 1);
       break;
     }

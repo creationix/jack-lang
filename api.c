@@ -9,6 +9,10 @@
 #include "api.h"
 #include "intern.h"
 
+static jack_type_t get_type(jack_value_t* value) {
+  return value ? value->type & JACK_TYPE_MASK : Nil;
+}
+
 static void free_value(jack_value_t* value);
 
 static jack_value_t* ref_value(jack_value_t *value) {
@@ -39,24 +43,24 @@ static jack_value_t* new_boolean(bool boolean) {
   return value;
 }
 
-static jack_value_t* new_buffer(size_t length, const char* data) {
+static jack_value_t* new_buffer(size_t size, const char* data) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Buffer;
-  value->buffer = malloc(sizeof(*value->buffer) + length);
-  value->buffer->length = length;
+  value->buffer = malloc(sizeof(*value->buffer) + size);
+  value->buffer->size = size;
   if (data) {
-    memcpy(value->buffer->data, data, length);
+    memcpy(value->buffer->data, data, size);
   }
   else {
-    memset(value->buffer->data, 0, length);
+    memset(value->buffer->data, 0, size);
   }
   return value;
 }
 
-static jack_value_t* new_symbol(size_t length, const char* data) {
+static jack_value_t* new_symbol(size_t size, const char* data) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Symbol;
-  value->buffer = jack_intern(length, data);
+  value->buffer = jack_intern(size, data);
   return value;
 }
 
@@ -120,6 +124,7 @@ static void free_function(jack_function_t* function) {
 }
 
 static void free_value(jack_value_t* value) {
+  assert(value); // Don't pass in nil values
   assert(value->ref_count < JACK_REF_COUNT);
   printf(" FREE ");
   jack_dump_value(value);
@@ -127,7 +132,7 @@ static void free_value(jack_value_t* value) {
   // Recursivly unref children.
   // Also free nested resources.
   switch (value->type) {
-    case Integer: case Boolean:
+    case Integer: case Boolean: case Nil:
       break;
     case Buffer:
       free(value->buffer);
@@ -158,7 +163,7 @@ static uint64_t hash_integer(uint64_t integer) {
 // Equality is defined as the same type and same value.  Since  symbols are
 // interned, this works for them too.
 static bool value_is_equal(jack_value_t *one, jack_value_t *two) {
-  return (one->type & JACK_TYPE_MASK) == (two->type & JACK_TYPE_MASK) &&
+  return (get_type(one) == get_type(two)) &&
          one->buffer == two->buffer;
 }
 
@@ -185,7 +190,7 @@ static jack_value_t* state_get(jack_state_t* state, int index) {
 
 static jack_value_t* state_get_as(jack_state_t* state, jack_type_t type, int index) {
   jack_value_t *value = state_get(state, index);
-  assert((value->type & JACK_TYPE_MASK) == type);
+  assert(get_type(value) == type);
   return value;
 }
 
@@ -377,13 +382,13 @@ void* jack_malloc(jack_state_t *state, size_t size) {
   return &(node->data);
 }
 
-
-
 void jack_dump_value(jack_value_t *value) {
-  jack_type_t type = value->type & JACK_TYPE_MASK;
+  jack_type_t type = get_type(value);
   switch (type) {
+    case Nil:
+      printf("(nil)");
     case Symbol:
-      printf(":%.*s", value->buffer->length, value->buffer->data);
+      printf(":%.*s", value->buffer->size, value->buffer->data);
       break;
     case Integer:
       printf("%ld", value->integer);
@@ -392,7 +397,7 @@ void jack_dump_value(jack_value_t *value) {
       printf("%s", value->boolean ? "true" : "false");
       break;
     case Buffer:
-      printf("Buffer[%d] %p", value->buffer->length, value->buffer->data);
+      printf("Buffer[%d] %p", value->buffer->size, value->buffer->data);
       break;
     case List: {
       jack_node_t *node = value->list->head;
@@ -646,10 +651,6 @@ void jack_map_iterate(jack_state_t *state) {
   iter->state->data = iterator;
 }
 
-bool jack_is_nil(jack_state_t *state, int index) {
-  return !state_get(state, index);
-}
-
 void jack_pop(jack_state_t *state) {
   unref_value(state_pop(state));
 }
@@ -665,6 +666,23 @@ void jack_dup(jack_state_t *state, int index) {
   ref_value(state_push(state, state_get(state, index)));
 }
 
+jack_type_t jack_get_type(jack_state_t *state, int index) {
+  return get_type(state_get(state, index));
+}
+
 intptr_t jack_get_integer(jack_state_t *state, int index) {
   return state_get_as(state, Integer, index)->integer;
+}
+bool jack_get_boolean(jack_state_t *state, int index) {
+  return state_get_as(state, Boolean, index)->boolean;
+}
+const char* jack_get_symbol(jack_state_t *state, int index, int *size) {
+  jack_buffer_t* buffer = state_get_as(state, Symbol, index)->buffer;
+  *size = buffer->size;
+  return buffer->data;
+}
+char* jack_get_buffer(jack_state_t *state, int index, int* size) {
+  jack_buffer_t* buffer = state_get_as(state, Buffer, index)->buffer;
+  *size = buffer->size;
+  return buffer->data;
 }

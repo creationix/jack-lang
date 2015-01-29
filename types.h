@@ -28,6 +28,7 @@ typedef struct {
 typedef int (jack_call_t)(jack_state_t *state);
 
 typedef enum {
+  Nil,
   Boolean,
   Integer,
   Buffer,
@@ -66,7 +67,7 @@ typedef struct {
 } jack_map_t;
 
 typedef struct {
-  int length;
+  int size;
   char data[];
 } jack_buffer_t;
 

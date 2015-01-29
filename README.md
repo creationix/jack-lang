@@ -17,6 +17,7 @@ could be replaced without touching the core engine.
 
 Currently there are seven data types, they are:
 
+ - **Nil**: iteration terminator, not-found token, nothing
  - **Boolean**: `true` or `false`
  - **Integer**: Signed pointer sized integer
  - **Buffer**: Mutable fixed-length byte-array
