@@ -1,0 +1,108 @@
+Jack Bytecode Design
+====================
+
+Heavily inspired by luajit bytecode.
+
+
+Comparison ops
+
+O P   | A   | D   | Description
+------+-----+-----+--------------
+ISLT  | var | var | Jump if A < D
+ISGE  | var | var | Jump if A ≥ D
+ISEQV | var | var | Jump if A = D
+ISNEV | var | var | Jump if A ≠ D
+ISEQS | var | str | Jump if A = D
+ISNES | var | str | Jump if A ≠ D
+ISEQN | var | num | Jump if A = D
+ISNEN | var | num | Jump if A ≠ D
+ISEQP | var | pri | Jump if A = D
+ISNEP | var | pri | Jump if A ≠ D
+
+
+Unary Test and Copy ops
+
+OP   | A   | D   | Description
+-----+-----+-----+------------------------------------
+ISTC | dst | var | Copy D to A and jump, if D is true
+ISFC | dst | var | Copy D to A and jump, if D is false
+IST  |     | var | Jump if D is true
+ISF  |     | var | Jump if D is false
+
+
+Unary ops
+
+OP   | A   | D   | Description
+-----+-----+-----+----------------------------
+MOV  | dst | var | Copy D to A
+NOT  | dst | var | Set A to boolean not of D
+UNM  | dst | var | Set A to -D (unary minus)
+LEN  | dst | var | Set A to length of D
+ITER | dst | var | Set A to iterator or D
+
+Binary ops
+------------------+-------------
+Buffer + Buffer   | Concatenate
+Buffer * Integer  | Repeat
+Integer + Integer | Add
+Integer - Integer | Subtract
+Integer / Integer | Divide
+Integer % Integer | Modulus
+
+OP    | A   | B     | C     | Description
+------+-----+-------+-------+--------------
+ADDVN | dst | var   | num   | A = B + C
+SUBVN | dst | var   | num   | A = B - C
+MULVN | dst | var   | num   | A = B * C
+DIVVN | dst | var   | num   | A = B / C
+MODVN | dst | var   | num   | A = B % C
+ADDNV | dst | var   | num   | A = C + B
+SUBNV | dst | var   | num   | A = C - B
+MULNV | dst | var   | num   | A = C * B
+DIVNV | dst | var   | num   | A = C / B
+MODNV | dst | var   | num   | A = C % B
+ADDVV | dst | var   | var   | A = B + C
+SUBVV | dst | var   | var   | A = B - C
+MULVV | dst | var   | var   | A = B * C
+DIVVV | dst | var   | var   | A = B / C
+MODVV | dst | var   | var   | A = B % C
+
+
+Constant ops
+
+OP      | A     | D     | Description
+--------+-------+-------+----------------------------------
+KSYM    | dst   | sym   | Set A to symbol constant D
+KBUF    | dst   | buf   | Set A to buffer constant D
+KSHORT  | dst   | lits  | Set A to 16 bit signed integer D
+KNUM    | dst   | num   | Set A to number constant D
+KPRI    | dst   | pri   | Set A to primitive D
+KNIL    | base  | base  | Set slots A to D to nil
+
+
+Upvalue and Function ops
+
+OP    | A     | D     |  Description
+------+-------+-------+------------------------------------------------
+UGET  | dst   | uv    | Set A to upvalue D
+USETV | uv    | var   | Set upvalue A to D
+USETS | uv    | sym   | Set upvalue A to symbol constant D
+USETN | uv    | num   | Set upvalue A to number constant D
+USETP | uv    | pri   | Set upvalue A to primitive D
+UCLO  | rbase | jump  | Close upvalues for slots ≥ rbase and jump to D
+FNEW  | dst   | func  | Create new closure from D and store it in A
+
+
+Map ops
+
+OP    | A    | B   | C/D  | Description
+------+------+-----+------+-------------------------------------------
+MNEW  | dst  |     | lit  | Set A to new map with D hash buckets.
+MDUP  | dst  |     | map  | Set A to duplicated template map D
+MGETV | dst  | var | var  | A = B[C]
+MGETS | dst  | var | sym  | A = B[C]
+MGETB | dst  | var | lit  | A = B[C]
+MSETV | var  | var | var  | B[C] = A
+MSETS | var  | var | str  | B[C] = A
+MSETB | var  | var | lit  | B[C] = A
+MSETM | base |     | num* | (A-1)[D], (A-1)[D+1], ... = A, A+1, ...
