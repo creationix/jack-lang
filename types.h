@@ -13,8 +13,15 @@
 struct jack_value_s;
 struct jack_stack_s;
 
+typedef struct jack_malloc_node_s {
+  struct jack_malloc_node_s *next;
+  char data[];
+} jack_malloc_node_t;
+
 typedef struct {
   void* data;
+  jack_malloc_node_t *head;
+  jack_malloc_node_t *tail;
   struct jack_stack_s *stack;
 } jack_state_t;
 
@@ -66,6 +73,7 @@ typedef struct {
 typedef struct {
   jack_call_t* call;
   jack_state_t* state;
+  const char* name;
 } jack_function_t;
 
 typedef struct jack_value_s {

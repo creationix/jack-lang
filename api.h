@@ -10,6 +10,7 @@ jack_value_t* unref_value(jack_value_t *value);
 
 jack_state_t* jack_new_state(int slots);
 void jack_free_state(jack_state_t *state);
+void* jack_malloc(jack_state_t *state, size_t size);
 
 void jack_dump_value(jack_value_t *value);
 void jack_dump_state(jack_state_t *state);

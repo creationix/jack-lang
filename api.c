@@ -84,6 +84,7 @@ static jack_value_t* new_function(jack_call_t *call, int slots) {
   value->function = malloc(sizeof(*value->function));
   value->function->call = call;
   value->function->state = jack_new_state(slots);
+  value->function->name = NULL;
   return value;
 }
 
@@ -329,6 +330,7 @@ static bool map_delete_symbol(jack_map_t* map, const char* symbol) {
 
 jack_state_t* jack_new_state(int slots) {
   jack_state_t *state = malloc(sizeof(*state));
+  memset(state, 0, sizeof(*state));
   jack_stack_t *stack = malloc(sizeof(*stack) + sizeof(jack_value_t*) * slots);
   state->stack = stack;
   stack->length = slots;
@@ -352,8 +354,30 @@ void jack_free_state(jack_state_t *state) {
     unref_value(state->stack->values[i]);
   }
   free(state->stack);
+  jack_malloc_node_t *node = state->head;
+  while (node) {
+    jack_malloc_node_t *next = node->next;
+    free(node);
+    node = next;
+  }
   free(state);
 }
+
+
+void* jack_malloc(jack_state_t *state, size_t size) {
+  jack_malloc_node_t *node = malloc(sizeof(*node) + size);
+  node->next = NULL;
+  if (state->tail) {
+    state->tail->next = node;
+  }
+  else {
+    state->head = node;
+  }
+  state->tail = node;
+  return &(node->data);
+}
+
+
 
 void jack_dump_value(jack_value_t *value) {
   jack_type_t type = value->type & JACK_TYPE_MASK;
@@ -400,7 +424,7 @@ void jack_dump_value(jack_value_t *value) {
       break;
     }
     case Function:
-      printf("<function %p>", value->function);
+      printf("<%s %p>", value->function->name ? value->function->name : "function", value->function);
       break;
   }
 
@@ -532,11 +556,13 @@ static int list_backward(jack_state_t *state) {
 void jack_list_forward(jack_state_t *state) {
   jack_list_t* list = state_get_as(state, List, -1)->list;
   jack_function_t* iter = jack_new_function(state, list_forward, 1);
+  iter->name = "list-forward";
   iter->state->data = list->head;
 }
 void jack_list_backward(jack_state_t *state) {
   jack_list_t* list = state_get_as(state, List, -1)->list;
   jack_function_t* iter = jack_new_function(state, list_backward, 1);
+  iter->name = "list-backward";
   iter->state->data = list->tail;
 }
 
@@ -563,13 +589,13 @@ bool jack_map_set_symbol(jack_state_t *state, int index, const char* symbol) {
 bool jack_map_get(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   jack_value_t* value = map_get(map, state_pop(state));
-  state_push(state, ref_value(value));
+  new_value(state, value);
   return (bool)value;
 }
 bool jack_map_get_symbol(jack_state_t *state, int index, const char* symbol) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   jack_value_t* value = map_get_symbol(map, symbol);
-  state_push(state, ref_value(value));
+  new_value(state, value);
   return (bool)value;
 }
 bool jack_map_has(jack_state_t *state, int index) {
@@ -587,6 +613,37 @@ bool jack_map_delete(jack_state_t *state, int index) {
 bool jack_map_delete_symbol(jack_state_t *state, int index, const char* symbol) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
   return map_delete_symbol(map, symbol);
+}
+
+typedef struct {
+  int bucket;
+  jack_pair_t* pair;
+} jack_map_iterator_t;
+
+static int map_iterate(jack_state_t *state) {
+  jack_map_iterator_t *iter = state->data;
+  jack_map_t* map = state_get_as(state, Map, 0)->map;
+  while (!iter->pair) {
+    if (iter->bucket >= map->num_buckets) {
+      jack_new_nil(state);
+      jack_new_nil(state);
+      return 2;
+    }
+    iter->pair = map->buckets[iter->bucket++];
+  }
+  new_value(state, iter->pair->key);
+  new_value(state, iter->pair->value);
+  iter->pair = iter->pair->next;
+  return 2;
+}
+void jack_map_iterate(jack_state_t *state) {
+  state_get_as(state, Map, -1);
+  jack_function_t* iter = jack_new_function(state, map_iterate, 1);
+  jack_map_iterator_t *iterator = jack_malloc(state, sizeof(*iterator));
+  iterator->bucket = 0;
+  iterator->pair = NULL;
+  iter->name = "map-iterate";
+  iter->state->data = iterator;
 }
 
 bool jack_is_nil(jack_state_t *state, int index) {
