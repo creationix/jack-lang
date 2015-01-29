@@ -11,14 +11,14 @@
 #define JACK_REF_COUNT 8
 
 struct jack_value_s;
+struct jack_stack_s;
 
 typedef struct {
-  int slots;  // Total number of slots in stack
-  int filled; // Number of filled slots in stack
-  struct jack_value_s** stack;
+  void* data;
+  struct jack_stack_s *stack;
 } jack_state_t;
 
-typedef int (jack_call_t)(jack_state_t *state, void* data, int argc);
+typedef int (jack_call_t)(jack_state_t *state);
 
 typedef enum {
   Boolean,
@@ -65,7 +65,7 @@ typedef struct {
 
 typedef struct {
   jack_call_t* call;
-  char data[]; // void* externally, but char[] here to be inline.
+  jack_state_t* state;
 } jack_function_t;
 
 typedef struct jack_value_s {
@@ -84,5 +84,11 @@ typedef struct jack_value_s {
     jack_function_t *function;
   };
 } jack_value_t;
+
+typedef struct jack_stack_s {
+  int length; // Total number of slots in the stack.
+  int top;    // Number of used slots / index to first empty slot.
+  jack_value_t* values[]; // Inline array of value pointers.
+} jack_stack_t;
 
 #endif

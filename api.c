@@ -78,13 +78,12 @@ static jack_value_t* new_map(int num_buckets) {
   return value;
 }
 
-static jack_value_t* new_function(jack_call_t *call, size_t data_size) {
+static jack_value_t* new_function(jack_call_t *call, int slots) {
   jack_value_t *value = malloc(sizeof(*value));
   value->type = Function;
-  size_t size = sizeof(jack_function_t) + data_size;
-  value->function = malloc(size);
-  memset(value->function, 0, size);
+  value->function = malloc(sizeof(*value->function));
   value->function->call = call;
+  value->function->state = jack_new_state(slots);
   return value;
 }
 
@@ -115,7 +114,7 @@ static void free_map(jack_map_t* map) {
 }
 
 static void free_function(jack_function_t* function) {
-  // TODO: Implement
+  jack_free_state(function->state);
   free(function);
 }
 
@@ -163,26 +162,34 @@ static bool value_is_equal(jack_value_t *one, jack_value_t *two) {
 }
 
 static jack_value_t* state_pop(jack_state_t* state) {
-  assert(state->filled > 0);
-  return state->stack[--state->filled];
+  jack_stack_t *stack = state->stack;
+  assert(stack->top > 0);
+  return stack->values[--stack->top];
 }
 
 static jack_value_t* state_push(jack_state_t* state, jack_value_t* value) {
-  assert(state->filled < state->slots);
+  jack_stack_t *stack = state->stack;
+  assert(stack->top < stack->length);
   // TODO: grow the slots if space runs out.
-  return state->stack[state->filled++] = value;
+  return stack->values[stack->top++] = value;
 }
 
 static jack_value_t* state_get(jack_state_t* state, int index) {
-  if (index < 0) index += state->filled;
-  assert(index >= 0 && index < state->slots);
-  jack_value_t *value = state->stack[index];
+  jack_stack_t *stack = state->stack;
+  if (index < 0) index += stack->top;
+  assert(index >= 0 && index < stack->length);
+  jack_value_t *value = stack->values[index];
   return value;
 }
 
 static jack_value_t* state_get_as(jack_state_t* state, jack_type_t type, int index) {
   jack_value_t *value = state_get(state, index);
   assert((value->type & JACK_TYPE_MASK) == type);
+  return value;
+}
+
+static jack_value_t* new_value(jack_state_t *state, jack_value_t *value) {
+  ref_value(state_push(state, value));
   return value;
 }
 
@@ -322,15 +329,27 @@ static bool map_delete_symbol(jack_map_t* map, const char* symbol) {
 
 jack_state_t* jack_new_state(int slots) {
   jack_state_t *state = malloc(sizeof(*state));
-  state->slots = slots;
-  state->filled = 0;
-  state->stack = malloc(sizeof(jack_value_t*) * slots);
+  jack_stack_t *stack = malloc(sizeof(*stack) + sizeof(jack_value_t*) * slots);
+  state->stack = stack;
+  stack->length = slots;
+  stack->top = 0;
   return state;
+}
+void jack_xmove(jack_state_t *from, jack_state_t *to, int num) {
+  jack_stack_t *a = from->stack;
+  jack_stack_t *b = to->stack;
+  // Make sure there is room to move the items.
+  assert(a->top >= num && b->top + num <= b->length);
+  a->top -= num;
+  for (int i = 0; i < num; ++i) {
+    b->values[b->top++] = a->values[a->top + i];
+    a->values[a->top + i] = NULL;
+  }
 }
 
 void jack_free_state(jack_state_t *state) {
-  for (int i = 0; i < state->filled; ++i) {
-    unref_value(state->stack[i]);
+  for (int i = 0; i < state->stack->top; ++i) {
+    unref_value(state->stack->values[i]);
   }
   free(state->stack);
   free(state);
@@ -389,9 +408,9 @@ void jack_dump_value(jack_value_t *value) {
 
 void jack_dump_state(jack_state_t *state) {
   int i;
-  printf("state: %p (%d/%d)", state, state->filled, state->slots);
-  for (i = 0; i < state->filled; ++i) {
-    jack_value_t* value = state->stack[i];
+  printf("state: %p (%d/%d)", state, state->stack->top, state->stack->length);
+  for (i = 0; i < state->stack->top; ++i) {
+    jack_value_t* value = state->stack->values[i];
     if (value) {
       printf("\n%d: (%d) ", i, value->ref_count / JACK_REF_COUNT);
       jack_dump_value(value);
@@ -407,66 +426,53 @@ void jack_new_nil(jack_state_t *state) {
   state_push(state, NULL);
 }
 
-void jack_new_value(jack_state_t *state, jack_value_t *value) {
-  ref_value(state_push(state, value));
-}
-
 void jack_new_integer(jack_state_t *state, intptr_t integer) {
-  ref_value(state_push(state, new_integer(integer)));
+  new_value(state, new_integer(integer));
 };
 
 void jack_new_boolean(jack_state_t *state, bool boolean) {
-  ref_value(state_push(state, new_boolean(boolean)));
+  new_value(state, new_boolean(boolean));
 };
 
 char* jack_new_buffer(jack_state_t *state, size_t length, const char* data) {
-  return ref_value(state_push(state, new_buffer(length, data)))->buffer->data;
+  return new_value(state, new_buffer(length, data))->buffer->data;
 };
 
 void jack_new_symbol(jack_state_t *state, const char* symbol) {
-  ref_value(state_push(state, new_symbol(strlen(symbol), symbol)));
+  new_value(state, new_symbol(strlen(symbol), symbol));
 };
 
 
-
-void* jack_new_function(jack_state_t *state, jack_call_t *call, size_t size) {
-  jack_value_t* value = new_function(call, size);
-  ref_value(state_push(state, value));
-  return value->function->data;
+jack_function_t* jack_new_function(jack_state_t *state, jack_call_t *call, int argc) {
+  jack_value_t* value = new_function(call, argc + 10);
+  jack_xmove(state, value->function->state, argc);
+  return new_value(state, value)->function;
 }
 
-int jack_function_call(jack_state_t *state, int argc) {
-  // Make sure there are enough slots and verify type of Native slot.
-  int index = state->filled - argc - 1;
-  assert(index >= 0 && (state->stack[index]->type & JACK_TYPE_MASK) == Function);
-
-  // Create a new state for the function call.
-  jack_state_t *new_state = jack_new_state(10 + argc);
+int jack_function_call(jack_state_t *state, int index, int argc) {
 
   // Grab a reference to the native function
-  jack_function_t* function = state->stack[index]->function;
-  // Move the arguments to the new stack.
-  for (int i = 0; i < argc; i++) {
-    new_state->stack[i] = state->stack[index + 1 + i];
-  }
-  // Resize the states
-  new_state->filled = argc;
-  state->filled = index;
+  jack_function_t* function = state_get_as(state, Function, index)->function;
+
+  int old_top = function->state->stack->top;
+
+  // Move the arguments to the function's state
+  jack_xmove(state, function->state, argc);
 
   // Call the native function
-  int retc = function->call(new_state, function->data, argc);
+  int retc = function->call(function->state);
 
-  unref_value(state->stack[index]);
+  // Move the results back
+  jack_xmove(function->state, state, retc);
 
-  int new_index = new_state->filled - retc;
-  for (int i = 0; i < new_state->filled; ++i) {
-    // Unref unused slots in the temporary state
-    if (i < new_index) unref_value(new_state->stack[i]);
-    // Move the returned slots
-    else state->stack[state->filled++] = new_state->stack[i];
+  int new_top = function->state->stack->top;
+
+  // Make sure the function didn't consume too many slots.
+  assert(new_top >= old_top);
+  if (new_top > old_top) {
+    // Reset the function's state
+    jack_popn(function->state, new_top - old_top);
   }
-  new_state->filled = 0;
-  jack_free_state(new_state);
 
   return retc;
 }
@@ -475,7 +481,7 @@ int jack_function_call(jack_state_t *state, int argc) {
 
 
 void jack_new_list(jack_state_t *state) {
-  ref_value(state_push(state, new_list()));
+  new_value(state, new_list());
 }
 int jack_list_length(jack_state_t *state, int index) {
   jack_list_t* list = state_get_as(state, List, index)->list;
@@ -501,9 +507,43 @@ int jack_list_shift(jack_state_t *state, int index) {
   state_push(state, list_shift(list));
   return list->length;
 }
+static int list_forward(jack_state_t *state) {
+  jack_node_t* node = state->data;
+  if (node) {
+    new_value(state, node->value);
+    state->data = node->next;
+  }
+  else {
+    jack_new_nil(state);
+  }
+  return 1;
+}
+static int list_backward(jack_state_t *state) {
+  jack_node_t* node = state->data;
+  if (node) {
+    new_value(state, node->value);
+    state->data = node->prev;
+  }
+  else {
+    jack_new_nil(state);
+  }
+  return 1;
+}
+void jack_list_forward(jack_state_t *state) {
+  jack_list_t* list = state_get_as(state, List, -1)->list;
+  jack_function_t* iter = jack_new_function(state, list_forward, 1);
+  iter->state->data = list->head;
+}
+void jack_list_backward(jack_state_t *state) {
+  jack_list_t* list = state_get_as(state, List, -1)->list;
+  jack_function_t* iter = jack_new_function(state, list_backward, 1);
+  iter->state->data = list->tail;
+}
+
+
 
 void jack_new_map(jack_state_t *state, int num_buckets) {
-  ref_value(state_push(state, new_map(num_buckets)));
+  new_value(state, new_map(num_buckets));
 }
 int jack_map_length(jack_state_t *state, int index) {
   jack_map_t* map = state_get_as(state, Map, index)->map;
@@ -549,9 +589,20 @@ bool jack_map_delete_symbol(jack_state_t *state, int index, const char* symbol) 
   return map_delete_symbol(map, symbol);
 }
 
+bool jack_is_nil(jack_state_t *state, int index) {
+  return !state_get(state, index);
+}
+
 void jack_pop(jack_state_t *state) {
   unref_value(state_pop(state));
 }
+
+void jack_popn(jack_state_t *state, int count) {
+  for (int i = 0; i < count; ++i) {
+    jack_pop(state);
+  }
+}
+
 
 void jack_dup(jack_state_t *state, int index) {
   ref_value(state_push(state, state_get(state, index)));

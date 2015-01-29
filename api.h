@@ -23,15 +23,13 @@ char* jack_new_buffer(jack_state_t *state, size_t length, const char* data);
 void jack_new_symbol(jack_state_t *state, const char* symbol);
 
 
-// Create a new exec value with stateful area and C behavior area.
-void* jack_new_function(jack_state_t *state, jack_call_t *call, size_t size);
-// Call native function.  Function is at top of stack right below arguments.
+// Create a new function wrapping a C function.
+// [-n,+1] Pop partial application values, push a new jack function on the stack.
+jack_function_t* jack_new_function(jack_state_t *state, jack_call_t *call, int argc);
+// Call function at [index].
 // Arguments are popped in reverse order, pushed in normal order.
-// The native function gets it's own state and stack.
-// Also a mutable void* is created along with the function object and is shared
-// By all invocations of the c function.
-// [-n,+m] Pop's argc + 1 items from stack and pushes return value number of items back on.
-int jack_function_call(jack_state_t *state, int argc);
+// [-n,+m] Pop's argc items from stack and pushes retc items on.
+int jack_function_call(jack_state_t *state, int index, int argc);
 
 // List is a doubly linked list of jack values
 // All operations work with list at stack[index].
@@ -55,7 +53,13 @@ int jack_list_pop(jack_state_t *state, int index);
 // Move from head of list to top of stack.  Returns new length.
 // [0,+1] Pushes value on stack.
 int jack_list_shift(jack_state_t *state, int index);
-
+// Replaces list at top of stack with forward iterator
+// [-1,+1] Pops list, Pushes iterator function.
+void jack_list_forward(jack_state_t *state);
+// Replaces list at top of stack with reverse iterator
+// Push an iterator function for list in reverse order.
+// [-1,+1] Pops list, Pushes iterator function.
+void jack_list_backward(jack_state_t *state);
 
 // Map is an unordered collection of unique keys with associated values.
 // All operations work with map at stack[index] and value at top.
@@ -89,14 +93,23 @@ bool jack_map_delete_symbol(jack_state_t *state, int index, const char* symbol);
 bool jack_map_has(jack_state_t *state, int index);
 // [0,0] Doesn't affect stack.  Creates symbol on the fly.
 bool jack_map_has_symbol(jack_state_t *state, int index, const char* symbol);
+// Push an iterator function for map.
+// [-1,+1] Pops map, pushes iterator function.
+void jack_map_iterate(jack_state_t *state);
 
 // Pop and discard the top value in the stack
 // [-1,0] Pops value from stack.
 void jack_pop(jack_state_t *state);
+// Pop and discard the top count values in the stack
+// [-n,0] Pops values from stack.
+void jack_popn(jack_state_t *state, int count);
 // Duplicate value in stack at [index] and push to top of stack.
 // [0,+1] Pushes duplicate on stack.
 void jack_dup(jack_state_t *state, int index);
+// Returns true if slot is nil.
+bool jack_is_nil(jack_state_t *state, int index);
 
+void jack_xmove(jack_state_t *from, jack_state_t *to, int num);
 
 intptr_t jack_get_integer(jack_state_t *state, int index);
 

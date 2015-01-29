@@ -17,11 +17,11 @@ could be replaced without touching the core engine.
 
 Currently there are seven data types, they are:
 
- - Boolean: `true` or `false`
- - Integer: Signed pointer sized integer
- - Buffer: Mutable fixed-length byte-array
- - Symbol: Immutable interned byte-array
- - List: Doubly linked list of arbitrary values
- - Map: Hash map with unique and arbitrary keys associated to arbitrary values
- - Function: C function pointer with internal state and upvalues.
-             User functions combine bytecode in state with interpreter pointer.
+ - **Boolean**: `true` or `false`
+ - **Integer**: Signed pointer sized integer
+ - **Buffer**: Mutable fixed-length byte-array
+ - **Symbol**: Immutable interned byte-array
+ - **List**: Doubly linked list of arbitrary values
+ - **Map**: Hash map with unique, arbitrary keys associated to arbitrary values
+ - **Function**: C function pointer with internal state and value stack.
+                 Script functions combine bytecode with interpreter C function.
