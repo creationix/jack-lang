@@ -10,11 +10,11 @@ static jack_state_t* state;
 static intptr_t jack_fib(intptr_t n) {
   jack_new_integer(state, n);
   jack_function_call(state, 1, 1);
-  return 1;
+  return jack_get_integer(state, -1);
 }
 
 int main() {
-  for (int j = 0; j < 0x1000; ++j) {
+  for (int j = 0; j < 0x1; ++j) {
 
     state = jack_new_state(15);
     jack_call(state, jack_math, 0);

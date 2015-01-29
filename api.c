@@ -127,9 +127,9 @@ static void free_function(jack_function_t* function) {
 static void free_value(jack_value_t* value) {
   assert(value); // Don't pass in nil values
   assert(value->ref_count < JACK_REF_COUNT);
-  printf(" FREE ");
-  jack_dump_value(value);
-  printf("\n");
+  // printf(" FREE ");
+  // jack_dump_value(value);
+  // printf("\n");
   // Recursivly unref children.
   // Also free nested resources.
   switch (value->type) {

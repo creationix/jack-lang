@@ -35,7 +35,6 @@ static int fib(jack_state_t *state) {
   // 0 - cache map
   // 1 - index
   intptr_t i = jack_get_integer(state, 1);
-  printf("fib %ld\n", i);
   if (i < 2) {
     jack_new_integer(state, 1);
     return 1;
