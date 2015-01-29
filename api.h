@@ -5,11 +5,17 @@
 #include <stdbool.h>
 #include "types.h"
 
+// TODO: remove this function
+jack_value_t* unref_value(jack_value_t *value);
+
 jack_state_t* jack_new_state(int slots);
 void jack_free_state(jack_state_t *state);
 
 void jack_dump_value(jack_value_t *value);
 void jack_dump_state(jack_state_t *state);
+
+void jack_new_nil(jack_state_t *state);
+void jack_new_value(jack_state_t *state, jack_value_t *value);
 
 void jack_new_integer(jack_state_t *state, intptr_t integer);
 void jack_new_boolean(jack_state_t *state, bool boolean);
@@ -90,6 +96,7 @@ void jack_pop(jack_state_t *state);
 // Duplicate value in stack at [index] and push to top of stack.
 // [0,+1] Pushes duplicate on stack.
 void jack_dup(jack_state_t *state, int index);
+
 
 intptr_t jack_get_integer(jack_state_t *state, int index);
 

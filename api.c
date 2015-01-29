@@ -16,7 +16,9 @@ static jack_value_t* ref_value(jack_value_t *value) {
   return value;
 }
 
-static jack_value_t* unref_value(jack_value_t *value) {
+// TODO: make static again.
+jack_value_t* unref_value(jack_value_t *value) {
+  if (!value) return NULL;
   value->ref_count -= JACK_REF_COUNT;
   if (value->ref_count >= JACK_REF_COUNT) return value;
   free_value(value);
@@ -119,6 +121,9 @@ static void free_function(jack_function_t* function) {
 
 static void free_value(jack_value_t* value) {
   assert(value->ref_count < JACK_REF_COUNT);
+  printf(" FREE ");
+  jack_dump_value(value);
+  printf("\n");
   // Recursivly unref children.
   // Also free nested resources.
   switch (value->type) {
@@ -386,10 +391,24 @@ void jack_dump_state(jack_state_t *state) {
   int i;
   printf("state: %p (%d/%d)", state, state->filled, state->slots);
   for (i = 0; i < state->filled; ++i) {
-    printf("\n%d: ", i);
-    jack_dump_value(state->stack[i]);
+    jack_value_t* value = state->stack[i];
+    if (value) {
+      printf("\n%d: (%d) ", i, value->ref_count / JACK_REF_COUNT);
+      jack_dump_value(value);
+    }
+    else {
+      printf("\n%d: (nil) ", i);
+    }
   }
   printf("\n");
+}
+
+void jack_new_nil(jack_state_t *state) {
+  state_push(state, NULL);
+}
+
+void jack_new_value(jack_state_t *state, jack_value_t *value) {
+  ref_value(state_push(state, value));
 }
 
 void jack_new_integer(jack_state_t *state, intptr_t integer) {
@@ -428,13 +447,16 @@ int jack_function_call(jack_state_t *state, int argc) {
   jack_function_t* function = state->stack[index]->function;
   // Move the arguments to the new stack.
   for (int i = 0; i < argc; i++) {
-    new_state->stack[i] = state->stack[index + 1 + argc];
+    new_state->stack[i] = state->stack[index + 1 + i];
   }
-  // Truncate the state
+  // Resize the states
+  new_state->filled = argc;
   state->filled = index;
 
   // Call the native function
   int retc = function->call(new_state, function->data, argc);
+
+  unref_value(state->stack[index]);
 
   int new_index = new_state->filled - retc;
   for (int i = 0; i < new_state->filled; ++i) {
@@ -532,7 +554,7 @@ void jack_pop(jack_state_t *state) {
 }
 
 void jack_dup(jack_state_t *state, int index) {
-  ref_value(state_push(state, ref_value(state_get(state, index))));
+  ref_value(state_push(state, state_get(state, index)));
 }
 
 intptr_t jack_get_integer(jack_state_t *state, int index) {
