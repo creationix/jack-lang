@@ -2,7 +2,7 @@
 
 #include "api.h"
 
-static int sample_function(jack_state_t *state, int argc) {
+static int sample_function(jack_state_t *state, void* data, int argc) {
   printf("This is a native function!!!\n");
   printf("It was called in state %p with %d arg(s)\n", state, argc);
   jack_new_boolean(state, true);
@@ -28,11 +28,11 @@ int main() {
     jack_list_push(state, -2);
   }
 
-  jack_new_native(state, sample_function);
+  jack_new_function(state, sample_function, 0);
   jack_new_boolean(state, false);
 
   jack_dump_state(state);
-  jack_native_call(state, 1);
+  jack_function_call(state, 1);
   jack_dump_state(state);
 
   jack_new_map(state, 10);

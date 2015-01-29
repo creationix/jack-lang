@@ -17,17 +17,15 @@ char* jack_new_buffer(jack_state_t *state, size_t length, const char* data);
 void jack_new_symbol(jack_state_t *state, const char* symbol);
 
 
-void jack_new_native(jack_state_t *state, jack_native_t *native);
+// Create a new exec value with stateful area and C behavior area.
+void* jack_new_function(jack_state_t *state, jack_call_t *call, size_t size);
 // Call native function.  Function is at top of stack right below arguments.
 // Arguments are popped in reverse order, pushed in normal order.
 // The native function gets it's own state and stack.
+// Also a mutable void* is created along with the function object and is shared
+// By all invocations of the c function.
 // [-n,+m] Pop's argc + 1 items from stack and pushes return value number of items back on.
-int jack_native_call(jack_state_t *state, int argc);
-
-// Create a new exec value with stateful area and C behavior area.
-void* jack_new_exec(jack_state_t *state, jack_function_t *function, size_t size);
-// Works same as jack_native_call, but on stateful exec value.
-int jack_exec_call(jack_state_t *state, int argc);
+int jack_function_call(jack_state_t *state, int argc);
 
 // List is a doubly linked list of jack values
 // All operations work with list at stack[index].

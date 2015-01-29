@@ -18,8 +18,7 @@ typedef struct {
   struct jack_value_s** stack;
 } jack_state_t;
 
-typedef int (jack_native_t)(jack_state_t *state, int argc);
-typedef int (jack_function_t)(jack_state_t *state, void* data, int argc);
+typedef int (jack_call_t)(jack_state_t *state, void* data, int argc);
 
 typedef enum {
   Boolean,
@@ -28,7 +27,6 @@ typedef enum {
   Symbol,
   List,
   Map,
-  Native,
   Function,
 } jack_type_t;
 
@@ -66,9 +64,9 @@ typedef struct {
 } jack_buffer_t;
 
 typedef struct {
-  jack_function_t* function;
-  char data[];
-} jack_exec_t;
+  jack_call_t* call;
+  char data[]; // void* externally, but char[] here to be inline.
+} jack_function_t;
 
 typedef struct jack_value_s {
   // type and ref_count are packed together.
@@ -84,8 +82,6 @@ typedef struct jack_value_s {
     jack_list_t *list;
     jack_map_t *map;
     jack_function_t *function;
-    jack_native_t *native;
-    jack_exec_t *exec;
   };
 } jack_value_t;
 
