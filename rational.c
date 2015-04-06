@@ -10,30 +10,31 @@ typedef enum jackType {
 
 typedef struct jackValue {
   JackType type;
-  intptr_t num;
-  intptr_t dem;
+  int num;
+  int dem;
 } JackValue;
 
-static intptr_t gcd(intptr_t a, intptr_t b) {
-  a = a < 0 ? -a : a;
-  b = b < 0 ? -b : b; 
-  while (a != b) {
-    if (a < b) b-= a; 
-    else a -= b;
+static int gcd(int a, int b) {
+  int c;
+  while (a != 0) {
+    c = a;
+    a = b % a;
+    b = c;
   }
-  return a;
+  return b;
 }
 
 static JackValue jack_add(JackValue a, JackValue b) {
   JackValue r;
   r.type = Number;
 
-  if (a.dem == 1 && b.dem == 1) {
+  if (a.dem == b.dem) {
     r.num = a.num + b.num;
-    r.dem = 1;
+    r.dem = a.dem;
     return r;
   }
-  intptr_t n, d, g;
+
+  int n, d, g;
   g = gcd(a.dem, b.dem);
   n = a.num * (b.dem / g) +
       b.num * (a.dem / g);
@@ -47,17 +48,18 @@ static JackValue jack_add(JackValue a, JackValue b) {
   r.dem = d;
   return r;
 }
-  
+
 static JackValue jack_sub(JackValue a, JackValue b) {
   JackValue r;
   r.type = Number;
 
-  if (a.dem == 1 && b.dem == 1) {
+  if (a.dem == b.dem) {
     r.num = a.num - b.num;
-    r.dem = 1;
+    r.dem = a.dem;
     return r;
   }
-  intptr_t n, d, g;
+
+  int n, d, g;
   g = gcd(a.dem, b.dem);
   n = a.num * (b.dem / g) -
       b.num * (a.dem / g);
@@ -80,9 +82,9 @@ static JackValue jack_mul(JackValue a, JackValue b) {
     r.num = a.num * b.num;
     return r;
   }
-  intptr_t n = a.num * b.num;
-  intptr_t d = a.dem * b.dem;
-  intptr_t g = gcd(n < 0 ? -n : n, d);
+  int n = a.num * b.num;
+  int d = a.dem * b.dem;
+  int g = gcd(n < 0 ? -n : n, d);
   r.num = n / g;
   r.dem = d / g;
   return r;
@@ -91,55 +93,60 @@ static JackValue jack_mul(JackValue a, JackValue b) {
 static JackValue jack_div(JackValue a, JackValue b) {
   JackValue r;
   r.type = Number;
-    
+
   if (a.dem == 1 && b.num == 1) {
     r.dem = 1;
     r.num = a.num * b.dem;
     return r;
   }
-  intptr_t n = a.num * b.dem;
-  intptr_t d = a.dem * b.num;
+  int n = a.num * b.dem;
+  int d = a.dem * b.num;
   if (d < 0) {
     d = -d;
     n = -n;
   }
-  intptr_t g = gcd(n < 0 ? -n : n, d);
+  int g = gcd(n < 0 ? -n : n, d);
   r.num = n / g;
   r.dem = d / g;
   return r;
 }
 
-static JackValue rat(intptr_t num, intptr_t dem) {
+static JackValue rat(int num, int dem) {
   JackValue r;
   r.type = Number;
+  if (num == 0) {
+    r.num = 0;
+    r.dem = 1;
+    return r;
+  }
   if (dem < 0) {
     dem = -dem;
     num = -num;
   }
-  intptr_t g = gcd(num, dem);
+  int g = gcd(num, dem);
   r.num = num / g;
   r.dem = dem / g;
   return r;
 }
 
 static void dump(JackValue v) {
-  printf("%ld/%ld\n", v.num, v.dem);
+  printf("%d/%d\n", v.num, v.dem);
 }
 
 typedef JackValue(binop)(JackValue, JackValue);
- 
+
 static void test(binop fn, const char* op) {
-  intptr_t a,b,c,d;
-  a = (rand() % 24) + 1;
+  int a,b,c,d;
+  a = (rand() % 24) - 12;
   b = (rand() % 24) + 1;
-  c = (rand() % 24) + 1;
+  c = (rand() % 24) - 12;
   d = (rand() % 24) + 1;
-  printf("%ld/%ld %s %ld/%ld = ", a, b, op, c, d);
+  printf("%d/%d %s %d/%d = ", a, b, op, c, d);
   dump(fn(rat(a, b), rat(c, d)));
 }
 
 int main() {
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 100; i++) {
     test(jack_add, "+");
     test(jack_sub, "-");
     test(jack_mul, "*");
