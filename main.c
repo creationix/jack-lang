@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 typedef enum {
@@ -11,6 +12,19 @@ typedef enum {
   Map,      // Hash-map of values (weak key for boxed types)
   Code,     // Bytecode
 } jack_type_t;
+
+
+struct jack_value {
+  union {
+    bool boolean;
+    int integer;
+    const char* error;
+    // TODO, add more types
+  };
+  jack_type_t type : 3;
+};
+
+typedef struct jack_value jack_value_t;
 
 typedef enum {
 
@@ -143,17 +157,60 @@ static uint32_t program[] = {
   0,
 };
 static int pc = 0;
-static int slots[10];
+static jack_value_t slots[10];
 
 int main() {
   uint32_t bc;
   while ((bc = program[pc++])) {
-    printf("%d %08x\n", pc, bc);
-    printf("%d OP=%d A=%d B=%d C=%d D=%d\n", pc, OPGETOP(bc), OPGETA(bc), OPGETB(bc), OPGETC(bc), OPGETD(bc));
+    switch(OPGETOP(bc)) {
+     case KSHORT:
+      printf("KSHORT slot=%d value=%d\n", OPGETA(bc), OPGETD(bc));
+      jack_value_t* value = &slots[OPGETA(bc)];
+      value->type = Integer;
+      value->integer = OPGETD(bc);
+      break;
+     case ADDVV:
+      printf("ADDVV %x %x %x\n", OPGETA(bc), OPGETB(bc), OPGETC(bc));
+      // A = B + C
+      jack_value_t* A = &slots[OPGETA(bc)];
+      jack_value_t* B = &slots[OPGETB(bc)];
+      jack_value_t* C = &slots[OPGETC(bc)];
+      if (B->type == Error) {
+        A->type = Error;
+        A->error = B->error;
+      }
+      else if (C->type == Error) {
+        A->type = Error;
+        A->error = C->error;
+      }
+      else if (B->type != Integer || C->type != Integer) {
+        A->type = Error;
+        A->error = "Not a Number";
+      }
+      else {
+        A->type = Integer;
+        A->integer = B->integer + C->integer;
+      }
+      break;
+     default:
+      printf("%d %08x\n", pc, bc);
+      printf("%d OP=%d A=%d B=%d C=%d D=%d\n", pc, OPGETOP(bc), OPGETA(bc), OPGETB(bc), OPGETC(bc), OPGETD(bc));
+      break;
+    }
   }
 
   for (int i = 0; i < 3; i++) {
-    printf("%d = %d\n", i, slots[i]);
+    jack_value_t* slot = &slots[i];
+    switch (slot->type) {
+     case Integer:
+      printf("%d = %d\n", i, slot->integer);
+      break;
+     case Error:
+      printf("%d = Error: %s\n", i, slot->error);
+      break;
+     default:
+      printf("%d = Unknown\n", i);
+    }
   }
   return 0;
 }
