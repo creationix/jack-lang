@@ -1,2 +1,2 @@
-all: 
-	$(CC) *.c -Wall -Werror -std=c99 -o jack -g
+all:
+	$(CC) *.c -Wall -Werror -std=c99 -Os -o jack -g
