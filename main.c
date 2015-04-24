@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <stdio.h>
+
 typedef enum {
   Error,    // Contagious type that causes all operations to return Error
   Boolean,  // True or False
@@ -11,7 +14,7 @@ typedef enum {
 
 typedef enum {
 
-  NOP, // No operation, does nothing at all!
+  END, // Stop execution
 
   // Comparison ops
   // --------------
@@ -55,8 +58,8 @@ typedef enum {
 
   // Binary ops
   // ------------------+-------------
-  // Buffer + Buffer   | Concatenate
-  // Buffer * Integer  | Repeat
+  // Symbol + Symbol   | Concatenate
+  // Symbol * Integer  | Repeat
   // Integer + Integer | Add
   // Integer - Integer | Subtract
   // Integer / Integer | Divide
@@ -90,6 +93,8 @@ typedef enum {
   KNUM,    // dst   | num   | Set A to number constant D
   KPRI,    // dst   | pri   | Set A to primitive D
 
+  JMP,     //       | DELTA | Jump DELTA instructions
+
 } jack_opcode_t;
 
 // A single bytecode instruction is 32 bit wide and has an 8 bit opcode field
@@ -101,7 +106,54 @@ typedef enum {
 // ┃   D   ┃ A ┃ OP ┃
 // ┗━━━━━━━┻━━━┻━━━━┛
 
+typedef struct {
+  char b : 8;
+  char c : 8;
+  char a : 8;
+  jack_opcode_t op : 8;
+} jack_opabc_t;
+
+typedef struct {
+  short d : 16;
+  char a : 8;
+  jack_opcode_t op : 8;
+} jack_opd_t;
+
+// #define OPABC(OP, A, B, C) (uint32_t)(jack_opabc_t){ \
+//   .op = OP, \
+//   .a = A, \
+//   .b = B, \
+//   .c = C \
+// }
+#define OPABC(OP, A, B, C) (OP | (int8_t)(A) << 8 | (int8_t)(B) << 24 | (int8_t)(C) << 16)
+//(((A) & 0xff) << 8) | (((B) & 0xff) << 24) | (((C) & 0xff) << 16))
+#define OPAD(OP, A, D)     (OP | (int8_t)(A) << 8 | (int16_t)(D) << 16)
+//(((A) & 0xff) << 8) | (((D) & 0xffff) << 16))
+
+#define OPGETOP(BC) (BC) & 0xff
+#define OPGETA(BC) (int8_t)(((BC) >> 8) & 0xff)
+#define OPGETB(BC) (int8_t)(((BC) >> 24) & 0xff)
+#define OPGETC(BC) (int8_t)(((BC) >> 16) & 0xff)
+#define OPGETD(BC) (int16_t)(((BC) >> 16) & 0xffff)
+
+static uint32_t program[] = {
+  OPAD(KSHORT, 0, 42),
+  OPAD(KSHORT, 1, -100),
+  OPABC(ADDVV, 2, 0, 1),
+  0,
+};
+static int pc = 0;
+static int slots[10];
 
 int main() {
+  uint32_t bc;
+  while ((bc = program[pc++])) {
+    printf("%d %08x\n", pc, bc);
+    printf("%d OP=%d A=%d B=%d C=%d D=%d\n", pc, OPGETOP(bc), OPGETA(bc), OPGETB(bc), OPGETC(bc), OPGETD(bc));
+  }
+
+  for (int i = 0; i < 3; i++) {
+    printf("%d = %d\n", i, slots[i]);
+  }
   return 0;
 }
