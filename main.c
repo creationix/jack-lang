@@ -159,6 +159,20 @@ static uint32_t program[] = {
 static int pc = 0;
 static jack_value_t slots[10];
 
+#define break_if_error(DEST, SOURCE) \
+  if (SOURCE->type == Error) { \
+    DEST->type = Error; \
+    DEST->error = SOURCE->error; \
+    break; \
+  }
+
+#define break_if_not(DEST, COND, MESSAGE) \
+  if (!(COND)) { \
+    DEST->type = Error; \
+    DEST->error = MESSAGE; \
+    break; \
+  }
+
 int main() {
   uint32_t bc;
   while ((bc = program[pc++])) {
@@ -175,22 +189,12 @@ int main() {
       jack_value_t* A = &slots[OPGETA(bc)];
       jack_value_t* B = &slots[OPGETB(bc)];
       jack_value_t* C = &slots[OPGETC(bc)];
-      if (B->type == Error) {
-        A->type = Error;
-        A->error = B->error;
-      }
-      else if (C->type == Error) {
-        A->type = Error;
-        A->error = C->error;
-      }
-      else if (B->type != Integer || C->type != Integer) {
-        A->type = Error;
-        A->error = "Not a Number";
-      }
-      else {
-        A->type = Integer;
-        A->integer = B->integer + C->integer;
-      }
+      break_if_error(A, B)
+      break_if_error(A, C)
+      break_if_not(A, B->type == Integer && C->type == Integer, "Not a Number")
+
+      A->type = Integer;
+      A->integer = B->integer + C->integer;
       break;
      default:
       printf("%d %08x\n", pc, bc);
